@@ -1,0 +1,7 @@
+{
+  "name": "Content Repurposing Dashboard",
+  "description": "An application to help founders and marketers turn one long-form asset (like a blog, report, or newsletter) into multiple short-form, ready-to-publish content pieces.",
+  "requestFramePermissions": [
+    "microphone"
+  ]
+}
