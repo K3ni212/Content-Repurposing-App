@@ -12,6 +12,7 @@ import { MegaphoneIcon } from './icons/MegaphoneIcon';
 import { FeatherIcon } from './icons/FeatherIcon';
 import { YouTubeIcon } from './icons/YouTubeIcon';
 import { MicrophoneIcon } from './icons/MicrophoneIcon';
+import { StarIcon } from './icons/StarIcon';
 
 interface ContentCardProps {
   content: ContentPiece;
@@ -60,19 +61,34 @@ export const ContentCard: React.FC<ContentCardProps> = ({ content, onClick }) =>
 
   const handleDragStart = (e: React.DragEvent<HTMLDivElement>) => {
     e.dataTransfer.setData('contentId', content.id);
+    // Create a ghost image that looks a bit transparent
+    const target = e.target as HTMLElement;
+    target.style.opacity = '0.5';
   };
+  
+  const handleDragEnd = (e: React.DragEvent<HTMLDivElement>) => {
+      const target = e.target as HTMLElement;
+      target.style.opacity = '1';
+  }
+  
+  const getSmartScoreColor = (score: number) => {
+    if (score > 85) return 'text-emerald-500';
+    if (score > 70) return 'text-yellow-500';
+    return 'text-red-500';
+  }
 
   return (
     <div
       draggable
       onDragStart={handleDragStart}
+      onDragEnd={handleDragEnd}
       onClick={onClick}
-      className="bg-white dark:bg-gray-800 rounded-lg p-4 shadow-sm cursor-pointer hover:shadow-md hover:border-blue-600 border-2 border-transparent transition-all mb-4"
+      className="bg-white dark:bg-gray-800 rounded-lg p-4 shadow-sm cursor-pointer hover:shadow-md hover:scale-[1.02] hover:border-blue-600 border-2 border-transparent transition-all duration-200 ease-out mb-4 animate-fade-in active:scale-[0.98]"
     >
       <div className="flex justify-between items-start">
         <h4 className="font-bold text-gray-800 dark:text-white pr-2 flex-1">{content.title}</h4>
         <div className={`flex-shrink-0 ${formatColors[content.format]}`}>
-          {Icon && <Icon className="w-5 h-5" />}
+          {Icon && <Icon className="w-5 h-5 transform transition-transform hover:rotate-12" />}
         </div>
       </div>
       <p className="text-sm text-gray-600 dark:text-gray-300 mt-2 line-clamp-2">
@@ -82,7 +98,15 @@ export const ContentCard: React.FC<ContentCardProps> = ({ content, onClick }) =>
         <span className={`text-xs font-semibold px-2 py-1 rounded-full ${statusColors[content.status]}`}>
           {content.status}
         </span>
-        <span className="text-xs text-gray-400">{content.format}</span>
+        <div className="flex items-center gap-2">
+           {content.smartScore && (
+                <div className={`flex items-center gap-1 text-xs font-bold ${getSmartScoreColor(content.smartScore)}`}>
+                    <StarIcon className="w-3 h-3" filled />
+                    <span>{content.smartScore}</span>
+                </div>
+            )}
+            <span className="text-xs text-gray-400">{content.format}</span>
+        </div>
       </div>
     </div>
   );

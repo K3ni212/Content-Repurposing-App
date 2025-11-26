@@ -4,36 +4,82 @@
     <meta charset="UTF-8" />
     <link rel="icon" type="image/svg+xml" href="/vite.svg" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <title>Content Repurposing Dashboard</title>
+    <title>RepurposeAI - Intelligent Content Operations</title>
     <script src="https://cdn.tailwindcss.com"></script>
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-    <link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono&family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&family=Plus+Jakarta+Sans:wght@400;500;600;700&display=swap" rel="stylesheet">
     <script>
       tailwind.config = {
         darkMode: 'class',
         theme: {
           extend: {
             fontFamily: {
-              sans: ['Inter', 'sans-serif'],
-              mono: ['IBM Plex Mono', 'monospace'],
+              sans: ['"Plus Jakarta Sans"', 'Inter', 'sans-serif'], // More premium geometric sans
+              body: ['Inter', 'sans-serif'],
             },
             colors: {
-              blue: {
-                600: '#2563EB'
+              gray: {
+                50: '#F9FAFB',
+                100: '#F3F4F6',
+                200: '#E5E7EB',
+                300: '#D1D5DB',
+                400: '#9CA3AF',
+                500: '#6B7280',
+                600: '#4B5563',
+                700: '#374151',
+                800: '#1F2937',
+                900: '#111827', // Obsidian
+                950: '#030712',
               },
-              emerald: {
-                500: '#10B981'
+              indigo: {
+                500: '#6366F1',
+                600: '#4F46E5', // Primary Brand Color
+                700: '#4338CA',
               }
+            },
+            boxShadow: {
+              'soft': '0 4px 20px -2px rgba(0, 0, 0, 0.05)',
+              'glow': '0 0 15px rgba(99, 102, 241, 0.3)',
+              'glow-lg': '0 0 30px rgba(99, 102, 241, 0.2)',
+            },
+            backgroundSize: {
+              '200%': '200% 200%',
             },
             keyframes: {
               fadeIn: {
                 '0%': { opacity: '0', transform: 'translateY(10px)' },
                 '100%': { opacity: '1', transform: 'translateY(0)' },
-              }
+              },
+              float: {
+                '0%, 100%': { transform: 'translateY(0)' },
+                '50%': { transform: 'translateY(-5px)' },
+              },
+              scaleIn: {
+                '0%': { opacity: '0', transform: 'scale(0.95)' },
+                '100%': { opacity: '1', transform: 'scale(1)' },
+              },
+              slideUp: {
+                '0%': { opacity: '0', transform: 'translateY(20px)' },
+                '100%': { opacity: '1', transform: 'translateY(0)' },
+              },
+              shimmer: {
+                '0%': { backgroundPosition: '-200% 0' },
+                '100%': { backgroundPosition: '200% 0' }
+              },
+              gradient: {
+                '0%': { backgroundPosition: '0% 50%' },
+                '50%': { backgroundPosition: '100% 50%' },
+                '100%': { backgroundPosition: '0% 50%' },
+              },
             },
             animation: {
-              'fade-in': 'fadeIn 0.5s ease-out forwards',
+              'fade-in': 'fadeIn 0.4s cubic-bezier(0.16, 1, 0.3, 1) forwards',
+              'scale-in': 'scaleIn 0.3s cubic-bezier(0.16, 1, 0.3, 1) forwards',
+              'slide-up': 'slideUp 0.5s cubic-bezier(0.16, 1, 0.3, 1) forwards',
+              'float': 'float 3s ease-in-out infinite',
+              'shimmer': 'shimmer 2s infinite linear',
+              'gradient': 'gradient 20s ease infinite',
             }
           }
         }
@@ -46,12 +92,13 @@
     "react": "https://aistudiocdn.com/react@^19.2.0",
     "@google/genai": "https://aistudiocdn.com/@google/genai@^1.28.0",
     "react-dom/": "https://aistudiocdn.com/react-dom@^19.2.0/",
-    "uuid": "https://aistudiocdn.com/uuid@^13.0.0"
+    "uuid": "https://aistudiocdn.com/uuid@^13.0.0",
+    "@supabase/supabase-js": "https://esm.sh/@supabase/supabase-js@2"
   }
 }
 </script>
 </head>
-  <body class="font-sans bg-gray-50 dark:bg-gray-900 text-gray-900 dark:text-gray-100">
+  <body class="font-body bg-gray-50 dark:bg-gray-950 text-gray-900 dark:text-gray-100 antialiased selection:bg-indigo-500 selection:text-white">
     <div id="root"></div>
     <script type="module" src="/index.tsx"></script>
   </body>
