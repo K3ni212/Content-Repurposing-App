@@ -308,17 +308,8 @@ export const ChatPage: React.FC<ChatPageProps> = ({ currentUser }) => {
     }));
 
     try {
-        // For simple text streaming we use message text, but if there's an attachment we need to handle it.
-        // The @google/genai SDK allows sending parts.
-        // We need to reconstruct the full message payload for the stream call if using advanced inputs.
-        // However, ai.chats.create maintains history. We just send the new user message.
-        
-        const streamInput = attachment ? { parts } : { message: input };
-        // Note: sendMessageStream argument depends on SDK version specifics. 
-        // Assuming standard message text or parts support. If parts not directly supported in simple call,
-        // we use contents structure. The SDK typically accepts a string or a content object.
-        
-        const responseStream = await chat.sendMessageStream(attachment ? { parts } : input);
+        const messageContent = attachment ? { parts } : input;
+        const responseStream = await chat.sendMessageStream({ message: messageContent });
         let fullResponse = '';
 
         setChatSessions(prev => prev.map(s => s.id === activeSessionId ? { ...s, messages: [...s.messages, { role: 'model', parts: [{ text: ''}]}] } : s));
@@ -343,81 +334,83 @@ export const ChatPage: React.FC<ChatPageProps> = ({ currentUser }) => {
     }
   };
 
-  return (
-    <div className="relative flex flex-col h-full animate-fade-in bg-white dark:bg-gray-900 overflow-hidden">
-        {/* Ambient Background Glow */}
-        <div className="absolute inset-0 pointer-events-none overflow-hidden">
-             <div className={`absolute top-[-20%] right-[-10%] w-[500px] h-[500px] bg-indigo-500/10 rounded-full blur-[100px] transition-opacity duration-1000 ${isThinkingMode ? 'opacity-60 bg-purple-600/20' : 'opacity-30'}`}></div>
-             <div className="absolute bottom-[-10%] left-[-10%] w-[400px] h-[400px] bg-blue-500/10 rounded-full blur-[100px] opacity-30"></div>
-        </div>
+  // Border Gradient Colors
+  let gradientColors = '#E2E8F0_0%,#E2E8F0_100%'; // Default gray
+  if (isThinkingMode) {
+      gradientColors = '#0000_0%,#A855F7_50%,#0000_100%'; // Purple for Thinking
+  } else if (useSearch) {
+      gradientColors = '#0000_0%,#EAB308_50%,#0000_100%'; // Yellow for Search
+  }
 
-        {/* History Sidebar */}
+  return (
+    <div className="relative flex flex-col h-full animate-fade-in bg-gradient-to-br from-indigo-100/40 via-white to-purple-100/40 dark:from-indigo-900/20 dark:via-[#0B0C15] dark:to-purple-900/20 animate-gradient bg-[length:400%_400%] overflow-hidden">
+        {/* History Sidebar - Glass */}
         <div className={`fixed inset-0 z-40 transition-opacity duration-300 ${isHistorySidebarOpen ? 'bg-black/60 backdrop-blur-sm' : 'bg-transparent pointer-events-none'}`} onClick={() => setIsHistorySidebarOpen(false)}></div>
-        <aside className={`absolute top-0 left-0 h-full w-72 bg-white/90 dark:bg-gray-900/90 backdrop-blur-xl border-r border-gray-200 dark:border-gray-800 z-50 transform transition-transform duration-300 ease-in-out ${isHistorySidebarOpen ? 'translate-x-0' : '-translate-x-full'} shadow-2xl`}>
+        <aside className={`absolute top-0 left-0 h-full w-72 glass-panel border-r border-gray-200 dark:border-white/10 z-50 transform transition-transform duration-300 ease-in-out ${isHistorySidebarOpen ? 'translate-x-0' : '-translate-x-full'} shadow-2xl bg-white/90 dark:bg-[#151725]/90`}>
             <div className="flex flex-col h-full">
-                <div className="flex justify-between items-center p-5 border-b border-gray-200 dark:border-gray-800">
+                <div className="flex justify-between items-center p-5 border-b border-gray-200 dark:border-white/10">
                     <h2 className="font-bold text-gray-900 dark:text-white">Chat History</h2>
-                    <button onClick={() => setIsHistorySidebarOpen(false)} className="p-1.5 rounded-lg hover:bg-gray-100 dark:hover:bg-gray-800 text-gray-500"><XCloseIcon className="w-5 h-5"/></button>
+                    <button onClick={() => setIsHistorySidebarOpen(false)} className="p-1.5 rounded-lg hover:bg-gray-200 dark:hover:bg-white/10 text-gray-500 dark:text-gray-400 hover:text-gray-900 dark:hover:text-white"><XCloseIcon className="w-5 h-5"/></button>
                 </div>
                 <div className="p-4">
-                    <button onClick={handleNewChat} className="flex items-center justify-center w-full bg-gradient-to-r from-indigo-600 to-blue-600 hover:from-indigo-700 hover:to-blue-700 text-white font-bold py-2.5 px-4 rounded-xl shadow-md transition-all text-sm animate-gradient bg-200%">
+                    <button onClick={handleNewChat} className="flex items-center justify-center w-full bg-gradient-to-r from-indigo-600 to-violet-600 hover:from-indigo-500 hover:to-violet-500 text-white font-bold py-2.5 px-4 rounded-xl shadow-glow transition-all text-sm animate-gradient bg-200%">
                         <PlusIcon className="w-5 h-5 mr-2"/>New Chat
                     </button>
                 </div>
-                <nav className="flex-grow overflow-y-auto p-3 space-y-1">
+                <nav className="flex-grow overflow-y-auto p-3 space-y-1 custom-scrollbar">
                     {chatSessions.map(session => (
-                        <button key={session.id} onClick={() => handleSelectSession(session.id)} className={`w-full text-left p-3 rounded-xl text-sm group flex justify-between items-center transition-all ${activeSessionId === session.id ? 'bg-indigo-50 dark:bg-indigo-900/20 text-indigo-700 dark:text-indigo-300' : 'hover:bg-gray-100 dark:hover:bg-gray-800 text-gray-700 dark:text-gray-300'}`}>
-                            <span className="truncate pr-2 font-medium">{session.title}</span>
-                            <span onClick={(e) => handleDeleteSession(e, session.id)} className="opacity-0 group-hover:opacity-100 text-gray-400 hover:text-red-500 p-1 hover:bg-red-50 dark:hover:bg-red-900/20 rounded"><TrashIcon className="w-4 h-4" /></span>
+                        <button key={session.id} onClick={() => handleSelectSession(session.id)} className={`w-full text-left p-3 rounded-xl text-sm group flex justify-between items-center transition-all ${activeSessionId === session.id ? 'bg-gray-200 dark:bg-white/10 text-gray-900 dark:text-white border border-gray-300 dark:border-white/5 font-semibold' : 'hover:bg-gray-100 dark:hover:bg-white/5 text-gray-600 dark:text-gray-400 hover:text-gray-900 dark:hover:text-white'}`}>
+                            <span className="truncate pr-2">{session.title}</span>
+                            <span onClick={(e) => handleDeleteSession(e, session.id)} className="opacity-0 group-hover:opacity-100 text-gray-500 hover:text-red-500 dark:hover:text-red-400 p-1 rounded transition-colors"><TrashIcon className="w-4 h-4" /></span>
                         </button>
                     ))}
                 </nav>
             </div>
         </aside>
 
-        {/* Main Chat Area */}
-        <div className="flex flex-col h-full z-10">
-            <header className={`p-4 border-b border-gray-200/50 dark:border-gray-800/50 bg-white/80 dark:bg-gray-900/80 backdrop-blur-md flex justify-between items-center flex-shrink-0 transition-colors duration-500 ${isThinkingMode ? 'border-purple-500/30 bg-purple-50/50 dark:bg-purple-900/10' : ''}`}>
+        {/* Main Chat Area - Transparent for ambient background */}
+        <div className="flex flex-col h-full z-10 relative">
+            <header className={`p-4 border-b border-gray-200/50 dark:border-white/5 bg-white/50 dark:bg-white/5 backdrop-blur-md flex justify-between items-center flex-shrink-0 transition-colors duration-500 ${isThinkingMode ? 'border-purple-200 dark:border-purple-500/20 bg-purple-50/50 dark:bg-purple-900/10' : ''}`}>
                 <div className="flex items-center gap-4">
-                    <button onClick={() => setIsHistorySidebarOpen(true)} aria-label="Open chat history" className="flex items-center justify-center bg-gray-100 hover:bg-gray-200 dark:bg-gray-800 dark:hover:bg-gray-700 p-2.5 rounded-xl transition-colors">
+                    <button onClick={() => setIsHistorySidebarOpen(true)} aria-label="Open chat history" className="flex items-center justify-center bg-white/50 dark:bg-white/5 hover:bg-white/80 dark:hover:bg-white/10 p-2.5 rounded-xl transition-colors border border-gray-200 dark:border-white/5 shadow-sm">
                         <PlusIcon className="w-5 h-5 text-gray-600 dark:text-gray-300" />
                     </button>
                 </div>
                 <div>
-                    <button onClick={() => setIsInstructionsModalOpen(true)} className="p-2.5 rounded-xl text-gray-500 dark:text-gray-400 hover:bg-gray-100 dark:hover:bg-gray-800 transition-colors" aria-label="Custom Instructions">
+                    <button onClick={() => setIsInstructionsModalOpen(true)} className="p-2.5 rounded-xl text-gray-500 dark:text-gray-400 hover:text-gray-900 dark:hover:text-white hover:bg-gray-200 dark:hover:bg-white/10 transition-colors" aria-label="Custom Instructions">
                         <SettingsIcon className="w-6 h-6" />
                     </button>
                 </div>
             </header>
             
-            <main className="flex-grow p-4 overflow-y-auto scroll-smooth">
+            <main className="flex-grow p-4 overflow-y-auto scroll-smooth custom-scrollbar">
                 <div className="max-w-3xl mx-auto">
                     {!activeSession || activeSession.messages.length === 0 ? (
                         <div className="text-center py-20 flex flex-col items-center justify-center h-full opacity-0 animate-fade-in" style={{animationDelay: '0.2s', animationFillMode: 'forwards'}}>
-                            <div className="w-16 h-16 bg-indigo-50 dark:bg-indigo-900/20 text-indigo-600 dark:text-indigo-400 rounded-2xl flex items-center justify-center mb-6 shadow-sm">
-                                <SparklesIcon className="w-8 h-8" />
+                            <div className="w-20 h-20 bg-indigo-500/10 text-indigo-500 dark:text-indigo-400 rounded-3xl flex items-center justify-center mb-6 shadow-glow border border-indigo-500/20 backdrop-blur-sm">
+                                <SparklesIcon className="w-10 h-10" />
                             </div>
-                            <h3 className="text-2xl font-bold text-gray-900 dark:text-white mb-2">How can I help you create today?</h3>
-                            <p className="text-gray-500 dark:text-gray-400 max-w-md">Draft a LinkedIn post, brainstorm headlines, or analyze your brand voice.</p>
+                            <h3 className="text-2xl font-bold text-gray-900 dark:text-white mb-2">Content Copilot</h3>
+                            <p className="text-gray-600 dark:text-gray-400 max-w-md">I'm ready to brainstorm, draft, and refine your content strategy.</p>
                         </div>
                     ) : (
                         activeSession.messages.map((msg, index) => (
                         <div key={index} className={`flex ${msg.role === 'user' ? 'justify-end' : 'justify-start'} mb-6 group animate-fade-in`}>
-                            <div className={`max-w-[85%] p-4 rounded-2xl shadow-sm ${
+                            <div className={`max-w-[85%] p-5 rounded-2xl shadow-lg backdrop-blur-md ${
                                 msg.role === 'user' 
-                                ? 'bg-gradient-to-br from-indigo-600 to-blue-600 text-white rounded-br-none animate-gradient bg-200%' 
-                                : 'bg-white dark:bg-gray-800 border border-gray-100 dark:border-gray-700 text-gray-800 dark:text-gray-200 rounded-bl-none'
+                                ? 'bg-indigo-600 text-white rounded-br-none shadow-indigo-500/20' 
+                                : 'bg-white dark:bg-[#151725]/80 border border-gray-200 dark:border-white/10 text-gray-800 dark:text-gray-200 rounded-bl-none shadow-black/5 dark:shadow-black/20'
                             }`}>
                                 {msg.role === 'model'
-                                    ? (msg.parts[0].text ? <MarkdownRenderer content={msg.parts[0].text} /> : <span className="flex gap-1 py-2"><span className="w-2 h-2 bg-gray-400 rounded-full animate-bounce"></span><span className="w-2 h-2 bg-gray-400 rounded-full animate-bounce delay-100"></span><span className="w-2 h-2 bg-gray-400 rounded-full animate-bounce delay-200"></span></span>)
+                                    ? (msg.parts[0].text ? <MarkdownRenderer content={msg.parts[0].text} /> : <span className="flex gap-1.5 py-1"><span className="w-2 h-2 bg-indigo-400 rounded-full animate-bounce"></span><span className="w-2 h-2 bg-indigo-400 rounded-full animate-bounce delay-100"></span><span className="w-2 h-2 bg-indigo-400 rounded-full animate-bounce delay-200"></span></span>)
                                     : (
                                         <div>
                                             {msg.parts.map((part, i) => (
                                                 <React.Fragment key={i}>
                                                     {part.text && <div className="whitespace-pre-wrap leading-relaxed">{part.text}</div>}
                                                     {part.inlineData && (
-                                                        <div className="mt-2 p-2 bg-white/20 rounded-lg text-xs flex items-center">
-                                                            <span className="opacity-75">Attached Media ({part.inlineData.mimeType})</span>
+                                                        <div className="mt-2 p-2 bg-white/20 rounded-lg text-xs flex items-center border border-white/10">
+                                                            <span className="opacity-90 font-mono">📎 Attached Media</span>
                                                         </div>
                                                     )}
                                                 </React.Fragment>
@@ -431,10 +424,10 @@ export const ChatPage: React.FC<ChatPageProps> = ({ currentUser }) => {
                     )}
                     {isLoading && (
                         <div className="flex justify-start mb-6 animate-fade-in">
-                            <div className="bg-white dark:bg-gray-800 border border-gray-100 dark:border-gray-700 p-3 rounded-2xl rounded-bl-none shadow-sm flex gap-1 items-center">
-                                <span className="w-1.5 h-1.5 bg-gray-400 rounded-full animate-bounce"></span>
-                                <span className="w-1.5 h-1.5 bg-gray-400 rounded-full animate-bounce delay-75"></span>
-                                <span className="w-1.5 h-1.5 bg-gray-400 rounded-full animate-bounce delay-150"></span>
+                            <div className="bg-white dark:bg-[#151725]/80 border border-gray-200 dark:border-white/10 p-4 rounded-2xl rounded-bl-none shadow-lg flex gap-1.5 items-center backdrop-blur-md">
+                                <span className="w-1.5 h-1.5 bg-indigo-400 rounded-full animate-bounce"></span>
+                                <span className="w-1.5 h-1.5 bg-indigo-400 rounded-full animate-bounce delay-75"></span>
+                                <span className="w-1.5 h-1.5 bg-indigo-400 rounded-full animate-bounce delay-150"></span>
                             </div>
                         </div>
                     )}
@@ -442,110 +435,122 @@ export const ChatPage: React.FC<ChatPageProps> = ({ currentUser }) => {
                 </div>
             </main>
 
-            <footer className="p-4 border-t border-gray-200 dark:border-gray-800 bg-white/90 dark:bg-gray-900/90 backdrop-blur-md flex-shrink-0">
+            <footer className="p-6 flex-shrink-0">
                 <div className="max-w-3xl mx-auto">
-                    <div className={`relative rounded-2xl border transition-all duration-300 ${isThinkingMode ? 'border-purple-300 dark:border-purple-800 shadow-[0_0_15px_rgba(168,85,247,0.15)]' : 'border-gray-300 dark:border-gray-700 shadow-sm focus-within:shadow-md focus-within:border-indigo-300 dark:focus-within:border-indigo-700'} bg-gray-50 dark:bg-gray-800`}>
-                        
-                        {attachment && (
-                            <div className="px-4 pt-3 flex items-center animate-fade-in">
-                                <div className="relative bg-white dark:bg-gray-700 rounded-lg p-2 pr-8 text-xs flex items-center gap-2 shadow-sm border border-gray-200 dark:border-gray-600">
-                                    <div className="bg-indigo-100 dark:bg-indigo-900/50 p-1 rounded text-indigo-600 dark:text-indigo-400">
-                                        {attachment.mimeType.startsWith('image') ? 'IMG' : 'FILE'}
-                                    </div>
-                                    <span className="truncate max-w-[150px] font-medium">{attachment.name}</span>
-                                    <button onClick={() => setAttachment(null)} className="absolute right-1 top-1 text-gray-400 hover:text-gray-600 dark:hover:text-gray-200 p-0.5">
-                                        <XCloseIcon className="w-3 h-3"/>
-                                    </button>
-                                </div>
-                            </div>
-                        )}
-
-                        <textarea
-                            value={input}
-                            onChange={e => setInput(e.target.value)}
-                            onKeyDown={(e) => {
-                                if (e.key === 'Enter' && !e.shiftKey) {
-                                    e.preventDefault();
-                                    handleSubmit(e as any);
-                                }
+                    {/* Animated Border Container */}
+                    <div className="relative group rounded-3xl p-[2px] overflow-hidden transition-all duration-300">
+                        {/* Spinning Gradient Border */}
+                        <div 
+                            className={`absolute inset-[-100%] animate-spin ${!isThinkingMode && !useSearch ? 'opacity-0' : 'opacity-100'}`}
+                            style={{
+                                background: `conic-gradient(from 90deg at 50% 50%, ${gradientColors})`,
+                                transition: 'opacity 0.3s ease-in-out'
                             }}
-                            placeholder={isThinkingMode ? "Ask a complex question..." : "Ask anything..."}
-                            disabled={isLoading}
-                            rows={1}
-                            className="w-full px-4 py-3 bg-transparent border-none rounded-2xl focus:ring-0 resize-none max-h-32 text-gray-900 dark:text-white placeholder:text-gray-400"
                         />
-                        <div className="flex justify-between items-center px-2 pb-2">
-                            <div className="flex items-center space-x-1 pl-1">
-                                {/* File Upload */}
-                                <input 
-                                    type="file" 
-                                    ref={fileInputRef} 
-                                    className="hidden" 
-                                    onChange={handleFileUpload} 
-                                    accept="image/png,image/jpeg,image/webp,audio/wav,audio/mp3,audio/aiff,audio/aac,audio/ogg,audio/flac"
-                                />
-                                <button 
-                                    type="button" 
-                                    onClick={() => fileInputRef.current?.click()}
-                                    className="p-2 rounded-full text-gray-500 hover:bg-gray-200 dark:hover:bg-gray-700 transition-colors"
-                                    title="Upload file"
-                                >
-                                    <PlusIcon className="w-5 h-5" />
-                                </button>
+                        
+                        {/* Inner Content - Background ensures opacity doesn't show gradient through text */}
+                        <div className={`relative rounded-3xl bg-white dark:bg-[#151725] h-full ${!isThinkingMode && !useSearch ? 'border border-gray-200 dark:border-white/10' : ''}`}>
+                            {attachment && (
+                                <div className="px-4 pt-3 flex items-center animate-fade-in">
+                                    <div className="relative bg-gray-100 dark:bg-white/10 rounded-lg p-2 pr-8 text-xs flex items-center gap-2 border border-gray-200 dark:border-white/10">
+                                        <div className="bg-indigo-500/20 p-1 rounded text-indigo-600 dark:text-indigo-300">
+                                            {attachment.mimeType.startsWith('image') ? 'IMG' : 'FILE'}
+                                        </div>
+                                        <span className="truncate max-w-[150px] font-medium text-gray-700 dark:text-gray-200">{attachment.name}</span>
+                                        <button onClick={() => setAttachment(null)} className="absolute right-1 top-1 text-gray-400 hover:text-gray-600 dark:hover:text-white p-0.5">
+                                            <XCloseIcon className="w-3 h-3"/>
+                                        </button>
+                                    </div>
+                                </div>
+                            )}
 
-                                {/* AI Tools Menu */}
-                                <div className="relative">
+                            <textarea
+                                value={input}
+                                onChange={e => setInput(e.target.value)}
+                                onKeyDown={(e) => {
+                                    if (e.key === 'Enter' && !e.shiftKey) {
+                                        e.preventDefault();
+                                        handleSubmit(e as any);
+                                    }
+                                }}
+                                placeholder={isThinkingMode ? "Reasoning mode active..." : "Type your request..."}
+                                disabled={isLoading}
+                                rows={1}
+                                className="w-full px-5 py-4 bg-transparent border-none rounded-3xl focus:ring-0 resize-none max-h-32 text-gray-900 dark:text-white placeholder:text-gray-400 font-medium"
+                            />
+                            <div className="flex justify-between items-center px-3 pb-3">
+                                <div className="flex items-center space-x-1 pl-1">
+                                    {/* File Upload */}
+                                    <input 
+                                        type="file" 
+                                        ref={fileInputRef} 
+                                        className="hidden" 
+                                        onChange={handleFileUpload} 
+                                        accept="image/png,image/jpeg,image/webp,audio/wav,audio/mp3,audio/aiff,audio/aac,audio/ogg,audio/flac"
+                                    />
                                     <button 
                                         type="button" 
-                                        onClick={() => setIsToolsOpen(!isToolsOpen)}
-                                        className={`p-2 rounded-full transition-all duration-200 ${isThinkingMode || useSearch || isToolsOpen ? 'text-indigo-600 bg-indigo-50 dark:bg-indigo-900/30' : 'text-gray-500 hover:bg-gray-200 dark:hover:bg-gray-700'}`}
-                                        title="AI Tools & Settings"
+                                        onClick={() => fileInputRef.current?.click()}
+                                        className="p-2 rounded-full text-gray-400 hover:text-gray-700 dark:hover:text-white hover:bg-gray-100 dark:hover:bg-white/10 transition-colors"
+                                        title="Upload file"
                                     >
-                                        <SparklesIcon className="w-5 h-5" />
+                                        <PlusIcon className="w-5 h-5" />
                                     </button>
-                                    
-                                    {isToolsOpen && (
-                                        <>
-                                            <div className="fixed inset-0 z-10" onClick={() => setIsToolsOpen(false)}></div>
-                                            <div className="absolute bottom-full left-0 mb-2 w-56 bg-white dark:bg-gray-800 rounded-xl shadow-xl border border-gray-200 dark:border-gray-700 p-2 z-20 animate-scale-in">
-                                                <div className="px-2 py-1.5 text-xs font-semibold text-gray-400 uppercase tracking-wider">Model Capabilities</div>
-                                                
-                                                <button 
-                                                    onClick={() => setIsThinkingMode(!isThinkingMode)}
-                                                    className={`w-full flex items-center justify-between px-3 py-2 rounded-lg text-sm transition-colors ${isThinkingMode ? 'bg-indigo-50 dark:bg-indigo-900/20 text-indigo-700 dark:text-indigo-300' : 'hover:bg-gray-100 dark:hover:bg-gray-700 text-gray-700 dark:text-gray-200'}`}
-                                                >
-                                                    <div className="flex items-center gap-2">
-                                                        <span className={`w-2 h-2 rounded-full ${isThinkingMode ? 'bg-indigo-500' : 'bg-gray-300'}`}></span>
-                                                        Thinking Mode
-                                                    </div>
-                                                    {isThinkingMode && <CheckIcon className="w-4 h-4"/>}
-                                                </button>
 
-                                                <button 
-                                                    onClick={() => setUseSearch(!useSearch)}
-                                                    className={`w-full flex items-center justify-between px-3 py-2 rounded-lg text-sm transition-colors ${useSearch ? 'bg-blue-50 dark:bg-blue-900/20 text-blue-700 dark:text-blue-300' : 'hover:bg-gray-100 dark:hover:bg-gray-700 text-gray-700 dark:text-gray-200'}`}
-                                                >
-                                                    <div className="flex items-center gap-2">
-                                                        <span className={`w-2 h-2 rounded-full ${useSearch ? 'bg-blue-500' : 'bg-gray-300'}`}></span>
-                                                        Google Search
-                                                    </div>
-                                                    {useSearch && <CheckIcon className="w-4 h-4"/>}
-                                                </button>
-                                            </div>
-                                        </>
-                                    )}
+                                    {/* AI Tools Menu */}
+                                    <div className="relative">
+                                        <button 
+                                            type="button" 
+                                            onClick={() => setIsToolsOpen(!isToolsOpen)}
+                                            className={`p-2 rounded-full transition-all duration-200 ${isThinkingMode || useSearch || isToolsOpen ? 'text-indigo-600 dark:text-indigo-400 bg-indigo-50 dark:bg-indigo-500/10' : 'text-gray-400 hover:text-gray-700 dark:hover:text-white hover:bg-gray-100 dark:hover:bg-white/10'}`}
+                                            title="AI Tools & Settings"
+                                        >
+                                            <SparklesIcon className="w-5 h-5" />
+                                        </button>
+                                        
+                                        {isToolsOpen && (
+                                            <>
+                                                <div className="fixed inset-0 z-10" onClick={() => setIsToolsOpen(false)}></div>
+                                                <div className="absolute bottom-full left-0 mb-3 w-60 bg-white dark:bg-[#151725] rounded-xl shadow-2xl p-2 z-20 animate-scale-in border border-gray-200 dark:border-white/10">
+                                                    <div className="px-3 py-2 text-[10px] font-bold text-gray-500 uppercase tracking-wider border-b border-gray-100 dark:border-white/5 mb-1"> capabilities</div>
+                                                    
+                                                    <button 
+                                                        onClick={() => { setIsThinkingMode(!isThinkingMode); if(useSearch) setUseSearch(false); }}
+                                                        className={`w-full flex items-center justify-between px-3 py-2.5 rounded-lg text-sm transition-colors mb-1 ${isThinkingMode ? 'bg-indigo-50 dark:bg-indigo-500/20 text-indigo-700 dark:text-indigo-300' : 'hover:bg-gray-50 dark:hover:bg-white/5 text-gray-700 dark:text-gray-300'}`}
+                                                    >
+                                                        <div className="flex items-center gap-2">
+                                                            <span className={`w-2 h-2 rounded-full ${isThinkingMode ? 'bg-indigo-500 dark:bg-indigo-400 shadow-[0_0_8px_rgba(99,102,241,0.8)]' : 'bg-gray-400 dark:bg-gray-600'}`}></span>
+                                                            Thinking Mode
+                                                        </div>
+                                                        {isThinkingMode && <CheckIcon className="w-4 h-4"/>}
+                                                    </button>
+
+                                                    <button 
+                                                        onClick={() => { setUseSearch(!useSearch); if(isThinkingMode) setIsThinkingMode(false); }}
+                                                        className={`w-full flex items-center justify-between px-3 py-2.5 rounded-lg text-sm transition-colors ${useSearch ? 'bg-yellow-50 dark:bg-yellow-500/20 text-yellow-700 dark:text-yellow-300' : 'hover:bg-gray-50 dark:hover:bg-white/5 text-gray-700 dark:text-gray-300'}`}
+                                                    >
+                                                        <div className="flex items-center gap-2">
+                                                            <span className={`w-2 h-2 rounded-full ${useSearch ? 'bg-yellow-500 dark:bg-yellow-400 shadow-[0_0_8px_rgba(234,179,8,0.8)]' : 'bg-gray-400 dark:bg-gray-600'}`}></span>
+                                                            Google Search
+                                                        </div>
+                                                        {useSearch && <CheckIcon className="w-4 h-4"/>}
+                                                    </button>
+                                                </div>
+                                            </>
+                                        )}
+                                    </div>
                                 </div>
-                            </div>
 
-                            <div className="flex items-center gap-2">
-                                <button type="button" onClick={handleMicClick} className={`p-2 rounded-full transition-all ${isRecording ? 'bg-red-100 text-red-600 dark:bg-red-900/30 animate-pulse' : 'hover:bg-gray-200 dark:hover:bg-gray-700 text-gray-500'}`}>
-                                    <MicrophoneIcon className="w-5 h-5" />
-                                </button>
-                                <button type="submit" disabled={isLoading || (!input.trim() && !attachment)} className="bg-indigo-600 hover:bg-indigo-700 text-white p-2 rounded-xl disabled:bg-gray-300 dark:disabled:bg-gray-700 disabled:cursor-not-allowed transition-all shadow-md">
-                                    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="currentColor" className="w-5 h-5">
-                                        <path d="M3.478 2.405a.75.75 0 00-.926.94l2.432 7.905H13.5a.75.75 0 010 1.5H4.984l-2.432 7.905a.75.75 0 00.926.94 60.519 60.519 0 0018.445-8.986.75.75 0 000-1.218A60.517 60.517 0 003.478 2.405z" />
-                                    </svg>
-                                </button>
+                                <div className="flex items-center gap-2">
+                                    <button type="button" onClick={handleMicClick} className={`p-2.5 rounded-full transition-all ${isRecording ? 'bg-red-500/20 text-red-500 animate-pulse border border-red-500/50 shadow-[0_0_15px_rgba(239,68,68,0.4)]' : 'hover:bg-gray-100 dark:hover:bg-white/10 text-gray-400 hover:text-gray-700 dark:hover:text-white'}`}>
+                                        <MicrophoneIcon className="w-5 h-5" />
+                                    </button>
+                                    <button type="submit" disabled={isLoading || (!input.trim() && !attachment)} className="bg-indigo-600 hover:bg-indigo-500 text-white p-2.5 rounded-xl disabled:bg-gray-300 dark:disabled:bg-gray-700 disabled:text-gray-500 dark:disabled:text-gray-500 disabled:cursor-not-allowed transition-all shadow-glow hover:scale-105 active:scale-95">
+                                        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="currentColor" className="w-5 h-5">
+                                            <path d="M3.478 2.405a.75.75 0 00-.926.94l2.432 7.905H13.5a.75.75 0 010 1.5H4.984l-2.432 7.905a.75.75 0 00.926.94 60.519 60.519 0 0018.445-8.986.75.75 0 000-1.218A60.517 60.517 0 003.478 2.405z" />
+                                        </svg>
+                                    </button>
+                                </div>
                             </div>
                         </div>
                     </div>

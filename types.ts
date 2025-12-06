@@ -235,6 +235,8 @@ export interface Workflow {
     createdAt: string; // ISO string
     nodes: WorkflowNode[];
     edges: WorkflowEdge[];
+    lastRun?: string; // ISO string
+    healthStatus?: 'healthy' | 'gap' | 'error' | 'warning'; // healthy (green), gap (yellow), error (red)
 }
 
 // Types for AI Agents

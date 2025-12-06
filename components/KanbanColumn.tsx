@@ -1,3 +1,4 @@
+
 import React from 'react';
 import { ContentPiece, ContentStatus } from '../types';
 import { ContentCard } from './ContentCard';
@@ -7,14 +8,6 @@ interface KanbanColumnProps {
   contentPieces: ContentPiece[];
   onDrop: (contentId: string, targetStatus: ContentStatus) => void;
   onCardClick: (content: ContentPiece) => void;
-}
-
-const statusStyles: Record<ContentStatus, { bg: string, text: string, border: string }> = {
-    [ContentStatus.Draft]: { bg: 'bg-gray-100 dark:bg-gray-800/50', text: 'text-gray-500', border: 'border-gray-300 dark:border-gray-700' },
-    [ContentStatus.Editing]: { bg: 'bg-yellow-500/5 dark:bg-yellow-500/10', text: 'text-yellow-600 dark:text-yellow-400', border: 'border-yellow-500/50' },
-    [ContentStatus.Approved]: { bg: 'bg-emerald-500/5 dark:bg-emerald-500/10', text: 'text-emerald-600 dark:text-emerald-400', border: 'border-emerald-500/50' },
-    [ContentStatus.ReadyToSchedule]: { bg: 'bg-purple-500/5 dark:bg-purple-500/10', text: 'text-purple-600 dark:text-purple-400', border: 'border-purple-500/50' },
-    [ContentStatus.Exported]: { bg: 'bg-blue-500/5 dark:bg-blue-500/10', text: 'text-blue-600 dark:text-blue-400', border: 'border-blue-500/50' },
 }
 
 export const KanbanColumn: React.FC<KanbanColumnProps> = ({ status, contentPieces, onDrop, onCardClick }) => {
@@ -38,27 +31,26 @@ export const KanbanColumn: React.FC<KanbanColumnProps> = ({ status, contentPiece
     setIsOver(false);
   };
 
-  const style = statusStyles[status];
-
   return (
-    <div className={`w-full md:w-1/5 flex-shrink-0 p-2 ${isOver ? 'bg-blue-100 dark:bg-blue-900/50' : ''} transition-colors rounded-lg`}>
-      <div className={`rounded-xl ${style.bg} p-4 h-full flex flex-col`}>
-        <h3 className={`font-bold ${style.text} mb-4 pb-2 border-b-2 ${style.border}`}>
-            {status} ({contentPieces.length})
+    <div className={`w-full md:w-1/5 flex-shrink-0 p-2 transition-all duration-300 ${isOver ? 'scale-[1.01]' : ''}`}>
+      <div className={`rounded-2xl glass-panel h-full flex flex-col p-4 transition-colors duration-300 ${isOver ? 'bg-white/10 border-indigo-500/50' : ''}`}>
+        <h3 className="font-bold text-gray-200 mb-4 pb-2 border-b border-white/10 flex items-center justify-between">
+            <span>{status}</span>
+            <span className="text-xs bg-white/10 px-2 py-0.5 rounded-full text-gray-400">{contentPieces.length}</span>
         </h3>
         <div
           onDragOver={handleDragOver}
           onDragLeave={handleDragLeave}
           onDrop={handleDrop}
-          className="min-h-[200px] flex-grow"
+          className="min-h-[200px] flex-grow space-y-3"
         >
           {contentPieces.length > 0 ? (
             contentPieces.map(content => (
               <ContentCard key={content.id} content={content} onClick={() => onCardClick(content)} />
             ))
            ) : (
-             <div className="text-center text-sm text-gray-400 dark:text-gray-500 h-full flex items-center justify-center border-2 border-dashed border-gray-300 dark:border-gray-700 rounded-lg p-4">
-                Drag cards here.
+             <div className="text-center text-sm text-gray-500 h-full flex items-center justify-center border border-dashed border-white/10 rounded-xl p-4 min-h-[150px]">
+                Drag cards here
             </div>
           )}
         </div>

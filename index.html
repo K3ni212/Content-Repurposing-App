@@ -1,5 +1,5 @@
 <!DOCTYPE html>
-<html lang="en">
+<html lang="en" class="dark">
   <head>
     <meta charset="UTF-8" />
     <link rel="icon" type="image/svg+xml" href="/vite.svg" />
@@ -15,7 +15,7 @@
         theme: {
           extend: {
             fontFamily: {
-              sans: ['"Plus Jakarta Sans"', 'Inter', 'sans-serif'], // More premium geometric sans
+              sans: ['"Plus Jakarta Sans"', 'Inter', 'sans-serif'],
               body: ['Inter', 'sans-serif'],
             },
             colors: {
@@ -29,22 +29,26 @@
                 600: '#4B5563',
                 700: '#374151',
                 800: '#1F2937',
-                900: '#111827', // Obsidian
-                950: '#030712',
+                900: '#111827',
+                950: '#0B0C15', // Deep Obsidian Custom
               },
               indigo: {
                 500: '#6366F1',
-                600: '#4F46E5', // Primary Brand Color
+                600: '#4F46E5',
                 700: '#4338CA',
+              },
+              violet: {
+                500: '#8B5CF6',
+                600: '#7C3AED',
               }
             },
             boxShadow: {
-              'soft': '0 4px 20px -2px rgba(0, 0, 0, 0.05)',
-              'glow': '0 0 15px rgba(99, 102, 241, 0.3)',
-              'glow-lg': '0 0 30px rgba(99, 102, 241, 0.2)',
+              'glass': '0 8px 32px 0 rgba(0, 0, 0, 0.37)',
+              'glow': '0 0 20px rgba(99, 102, 241, 0.5)',
+              'glow-lg': '0 0 40px rgba(139, 92, 246, 0.3)',
             },
-            backgroundSize: {
-              '200%': '200% 200%',
+            backgroundImage: {
+              'glass-gradient': 'linear-gradient(135deg, rgba(255, 255, 255, 0.05) 0%, rgba(255, 255, 255, 0.01) 100%)',
             },
             keyframes: {
               fadeIn: {
@@ -53,7 +57,7 @@
               },
               float: {
                 '0%, 100%': { transform: 'translateY(0)' },
-                '50%': { transform: 'translateY(-5px)' },
+                '50%': { transform: 'translateY(-10px)' },
               },
               scaleIn: {
                 '0%': { opacity: '0', transform: 'scale(0.95)' },
@@ -72,19 +76,58 @@
                 '50%': { backgroundPosition: '100% 50%' },
                 '100%': { backgroundPosition: '0% 50%' },
               },
+              pulseGlow: {
+                '0%, 100%': { boxShadow: '0 0 10px rgba(99, 102, 241, 0.2)' },
+                '50%': { boxShadow: '0 0 25px rgba(99, 102, 241, 0.6)' },
+              }
             },
             animation: {
               'fade-in': 'fadeIn 0.4s cubic-bezier(0.16, 1, 0.3, 1) forwards',
               'scale-in': 'scaleIn 0.3s cubic-bezier(0.16, 1, 0.3, 1) forwards',
               'slide-up': 'slideUp 0.5s cubic-bezier(0.16, 1, 0.3, 1) forwards',
-              'float': 'float 3s ease-in-out infinite',
+              'float': 'float 6s ease-in-out infinite',
               'shimmer': 'shimmer 2s infinite linear',
-              'gradient': 'gradient 20s ease infinite',
+              'gradient': 'gradient 15s ease infinite',
+              'pulse-glow': 'pulseGlow 3s infinite',
             }
           }
         }
       }
     </script>
+    <style>
+      /* Custom Scrollbar for Glassmorphism */
+      ::-webkit-scrollbar {
+        width: 8px;
+        height: 8px;
+      }
+      ::-webkit-scrollbar-track {
+        background: rgba(0, 0, 0, 0.1); 
+      }
+      ::-webkit-scrollbar-thumb {
+        background: rgba(255, 255, 255, 0.1); 
+        border-radius: 4px;
+      }
+      ::-webkit-scrollbar-thumb:hover {
+        background: rgba(255, 255, 255, 0.2); 
+      }
+      
+      body {
+        background-color: #0B0C15; /* Fallback */
+        color: #f3f4f6;
+      }
+      
+      .glass-panel {
+        background: rgba(255, 255, 255, 0.03);
+        backdrop-filter: blur(16px);
+        -webkit-backdrop-filter: blur(16px);
+        border: 1px solid rgba(255, 255, 255, 0.08);
+      }
+      
+      .glass-panel-hover:hover {
+        background: rgba(255, 255, 255, 0.06);
+        border-color: rgba(255, 255, 255, 0.15);
+      }
+    </style>
   <script type="importmap">
 {
   "imports": {
@@ -98,7 +141,7 @@
 }
 </script>
 </head>
-  <body class="font-body bg-gray-50 dark:bg-gray-950 text-gray-900 dark:text-gray-100 antialiased selection:bg-indigo-500 selection:text-white">
+  <body class="font-body antialiased selection:bg-indigo-500 selection:text-white overflow-hidden">
     <div id="root"></div>
     <script type="module" src="/index.tsx"></script>
   </body>

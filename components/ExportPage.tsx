@@ -1,5 +1,4 @@
 
-
 import React, { useState, useMemo } from 'react';
 import { Project, ContentPiece, ContentStatus, ContentFormat } from '../types';
 import { LinkedInIcon } from './icons/LinkedInIcon';
@@ -17,6 +16,7 @@ import { MicrophoneIcon } from './icons/MicrophoneIcon';
 import { ExportIcon } from './icons/ExportIcon';
 import { CopyIcon } from './icons/CopyIcon';
 import { CheckIcon } from './icons/CheckIcon';
+import { BriefcaseIcon } from './icons/BriefcaseIcon';
 
 // Augment ContentPiece with project info for the view
 interface ExportableContentPiece extends ContentPiece {
@@ -139,62 +139,115 @@ export const ExportPage: React.FC<ExportPageProps> = ({ projects, onUpdateConten
     };
 
     return (
-        <div className="p-4 md:p-8 animate-fade-in h-full flex flex-col">
-            <h1 className="text-3xl font-bold text-gray-900 dark:text-white mb-2">Export Center</h1>
-            <p className="text-sm text-gray-500 dark:text-gray-400 mb-6">
-                Manage and export your finalized content. Select items and export them as a CSV.
-            </p>
-            
-            <div className="flex justify-between items-center mb-4">
-                 <div className="flex items-center">
-                    <input type="checkbox" onChange={handleSelectAll} checked={selectedIds.length === exportableContent.length && exportableContent.length > 0} className="h-4 w-4 text-blue-600 border-gray-300 rounded focus:ring-blue-500"/>
-                    <label className="ml-2 text-sm text-gray-600 dark:text-gray-300">Select All</label>
-                 </div>
-                 <div className="flex items-center gap-2">
-                    <button onClick={handleMarkAsExported} disabled={selectedIds.length === 0} className="flex items-center bg-gray-500 hover:bg-gray-600 text-white font-bold py-2 px-4 rounded-md disabled:bg-gray-400 disabled:cursor-not-allowed">
-                        <CheckIcon className="w-5 h-5 mr-2" /> Mark as Exported {selectedIds.length > 0 ? `(${selectedIds.length})` : ''}
-                    </button>
-                    <button onClick={handleExportCSV} disabled={selectedIds.length === 0} className="flex items-center bg-blue-600 hover:bg-blue-700 text-white font-bold py-2 px-4 rounded-md disabled:bg-gray-400 disabled:cursor-not-allowed">
-                        <ExportIcon className="w-5 h-5 mr-2" /> Export {selectedIds.length > 0 ? `(${selectedIds.length})` : ''} as CSV
-                    </button>
-                 </div>
-            </div>
+        <div className="p-6 md:p-10 animate-fade-in h-full flex flex-col bg-[#FAFAFA] dark:bg-[#0B0C15] relative">
+             {/* Background Glow */}
+             <div className="absolute top-0 right-0 w-[600px] h-[600px] bg-blue-500/5 rounded-full blur-[120px] pointer-events-none"></div>
 
-            <div className="flex-1 overflow-y-auto bg-white dark:bg-gray-800 rounded-lg shadow">
-                 <table className="w-full text-sm text-left text-gray-500 dark:text-gray-400">
-                    <thead className="text-xs text-gray-700 uppercase bg-gray-50 dark:bg-gray-700 dark:text-gray-400 sticky top-0">
-                        <tr>
-                            <th scope="col" className="p-4"></th>
-                            <th scope="col" className="px-6 py-3">Title</th>
-                            <th scope="col" className="px-6 py-3">Format</th>
-                            <th scope="col" className="px-6 py-3">Project</th>
-                            <th scope="col" className="px-6 py-3">Status</th>
-                            <th scope="col" className="px-6 py-3">Actions</th>
-                        </tr>
-                    </thead>
-                    <tbody>
-                         {exportableContent.length === 0 ? (
-                            <tr><td colSpan={6} className="text-center py-16 text-gray-500">No content is ready for export.</td></tr>
-                        ) : (
-                            exportableContent.map(item => {
-                                const Icon = formatIcons[item.format];
-                                return (
-                                <tr key={item.id} className="bg-white dark:bg-gray-800 border-b dark:border-gray-700 hover:bg-gray-50 dark:hover:bg-gray-600">
-                                    <td className="w-4 p-4"><input type="checkbox" checked={selectedIds.includes(item.id)} onChange={() => handleSelect(item.id)} className="h-4 w-4 text-blue-600 border-gray-300 rounded focus:ring-blue-500"/></td>
-                                    <th scope="row" className="px-6 py-4 font-medium text-gray-900 whitespace-nowrap dark:text-white">{item.title}</th>
-                                    <td className="px-6 py-4 flex items-center">{Icon && <Icon className="w-4 h-4 mr-2"/>}{item.format}</td>
-                                    <td className="px-6 py-4">{item.projectName}</td>
-                                    <td className="px-6 py-4">{item.status}</td>
-                                    <td className="px-6 py-4">
-                                        <button onClick={() => handleCopyToClipboard(item.content)} className="p-2 text-gray-500 hover:text-blue-600 dark:text-gray-400 dark:hover:text-blue-400" aria-label="Copy content">
-                                            <CopyIcon className="w-5 h-5" />
-                                        </button>
-                                    </td>
+            <div className="mb-8 relative z-10">
+                <div className="flex items-center gap-3 mb-2">
+                    <div className="p-2 bg-blue-100 dark:bg-blue-900/30 rounded-xl text-blue-600 dark:text-blue-400">
+                        <ExportIcon className="w-6 h-6"/>
+                    </div>
+                    <h1 className="text-3xl font-bold text-gray-900 dark:text-white tracking-tight">Export Center</h1>
+                </div>
+                <p className="text-gray-500 dark:text-gray-400">
+                    Finalize your content pipeline. Select items to mark as complete or export for publishing.
+                </p>
+            </div>
+            
+            <div className="flex-1 flex flex-col min-h-0 relative z-10">
+                {/* Toolbar */}
+                <div className="flex flex-wrap justify-between items-center mb-4 bg-white/70 dark:bg-gray-800/70 backdrop-blur-md p-4 rounded-2xl border border-white/20 shadow-sm">
+                     <div className="flex items-center">
+                        <label className="flex items-center cursor-pointer group">
+                            <input type="checkbox" onChange={handleSelectAll} checked={selectedIds.length === exportableContent.length && exportableContent.length > 0} className="h-5 w-5 text-indigo-600 border-gray-300 rounded focus:ring-indigo-500 cursor-pointer"/>
+                            <span className="ml-3 text-sm font-semibold text-gray-700 dark:text-gray-200 group-hover:text-indigo-600 transition-colors">Select All</span>
+                        </label>
+                     </div>
+                     <div className="flex items-center gap-3">
+                        <button 
+                            onClick={handleMarkAsExported} 
+                            disabled={selectedIds.length === 0} 
+                            className="flex items-center gap-2 px-4 py-2 bg-white dark:bg-gray-700 border border-gray-200 dark:border-gray-600 rounded-xl text-sm font-semibold text-gray-700 dark:text-gray-200 hover:bg-gray-50 dark:hover:bg-gray-600 transition-all disabled:opacity-50 disabled:cursor-not-allowed shadow-sm"
+                        >
+                            <CheckIcon className="w-4 h-4 text-emerald-500" /> Mark Exported
+                        </button>
+                        <button 
+                            onClick={handleExportCSV} 
+                            disabled={selectedIds.length === 0} 
+                            className="flex items-center gap-2 px-5 py-2 bg-indigo-600 hover:bg-indigo-700 text-white rounded-xl text-sm font-bold shadow-lg shadow-indigo-500/20 transition-all hover:scale-105 disabled:opacity-50 disabled:cursor-not-allowed disabled:transform-none disabled:shadow-none"
+                        >
+                            <ExportIcon className="w-4 h-4" /> Export CSV
+                        </button>
+                     </div>
+                </div>
+
+                {/* Glass Table Container */}
+                <div className="flex-1 overflow-hidden bg-white/60 dark:bg-gray-900/60 backdrop-blur-xl rounded-2xl border border-gray-200 dark:border-white/5 shadow-xl flex flex-col">
+                     <div className="overflow-y-auto custom-scrollbar flex-1">
+                         <table className="w-full text-sm text-left">
+                            <thead className="text-xs font-bold text-gray-500 dark:text-gray-400 uppercase tracking-wider bg-gray-50/80 dark:bg-gray-800/80 backdrop-blur sticky top-0 z-10 border-b border-gray-200 dark:border-white/5">
+                                <tr>
+                                    <th scope="col" className="p-4 w-12 text-center">#</th>
+                                    <th scope="col" className="px-6 py-4">Title</th>
+                                    <th scope="col" className="px-6 py-4">Format</th>
+                                    <th scope="col" className="px-6 py-4">Project</th>
+                                    <th scope="col" className="px-6 py-4">Status</th>
+                                    <th scope="col" className="px-6 py-4 text-right">Actions</th>
                                 </tr>
-                            )})
-                        )}
-                    </tbody>
-                 </table>
+                            </thead>
+                            <tbody className="divide-y divide-gray-100 dark:divide-white/5">
+                                 {exportableContent.length === 0 ? (
+                                    <tr><td colSpan={6} className="text-center py-20 text-gray-400 text-base">No content is ready for export.</td></tr>
+                                ) : (
+                                    exportableContent.map(item => {
+                                        const Icon = formatIcons[item.format] || MegaphoneIcon;
+                                        const isSelected = selectedIds.includes(item.id);
+                                        return (
+                                        <tr 
+                                            key={item.id} 
+                                            className={`group transition-colors ${isSelected ? 'bg-indigo-50/50 dark:bg-indigo-900/10' : 'hover:bg-white/60 dark:hover:bg-white/5'}`}
+                                        >
+                                            <td className="p-4 text-center">
+                                                <input type="checkbox" checked={isSelected} onChange={() => handleSelect(item.id)} className="h-4 w-4 text-indigo-600 border-gray-300 rounded focus:ring-indigo-500 cursor-pointer"/>
+                                            </td>
+                                            <th scope="row" className="px-6 py-4 font-semibold text-gray-900 dark:text-white">
+                                                <div className="line-clamp-1 max-w-md">{item.title}</div>
+                                            </th>
+                                            <td className="px-6 py-4">
+                                                <div className="flex items-center gap-2 text-gray-600 dark:text-gray-300 bg-gray-100 dark:bg-gray-800 px-2 py-1 rounded-lg w-fit">
+                                                    <Icon className="w-4 h-4"/> 
+                                                    <span className="text-xs font-medium">{item.format}</span>
+                                                </div>
+                                            </td>
+                                            <td className="px-6 py-4">
+                                                <div className="flex items-center gap-2 text-gray-500 dark:text-gray-400">
+                                                    <BriefcaseIcon className="w-4 h-4 opacity-50"/>
+                                                    {item.projectName}
+                                                </div>
+                                            </td>
+                                            <td className="px-6 py-4">
+                                                <span className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-bold ${
+                                                    item.status === ContentStatus.Exported 
+                                                    ? 'bg-blue-100 text-blue-800 dark:bg-blue-900/30 dark:text-blue-300'
+                                                    : 'bg-purple-100 text-purple-800 dark:bg-purple-900/30 dark:text-purple-300'
+                                                }`}>
+                                                    <span className={`w-1.5 h-1.5 rounded-full mr-1.5 ${item.status === ContentStatus.Exported ? 'bg-blue-500' : 'bg-purple-500'}`}></span>
+                                                    {item.status}
+                                                </span>
+                                            </td>
+                                            <td className="px-6 py-4 text-right">
+                                                <button onClick={() => handleCopyToClipboard(item.content)} className="p-2 text-gray-400 hover:text-indigo-600 dark:hover:text-indigo-400 hover:bg-gray-100 dark:hover:bg-gray-700 rounded-lg transition-colors" aria-label="Copy content" title="Copy to Clipboard">
+                                                    <CopyIcon className="w-4 h-4" />
+                                                </button>
+                                            </td>
+                                        </tr>
+                                    )})
+                                )}
+                            </tbody>
+                         </table>
+                     </div>
+                </div>
             </div>
         </div>
     );
