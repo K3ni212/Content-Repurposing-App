@@ -97,7 +97,10 @@ export interface Project {
 
 export interface ChatMessage {
     role: 'user' | 'model';
-    parts: { text: string }[];
+    parts: { text: string; inlineData?: any }[];
+    // Versioning support
+    versions?: string[];
+    currentVersionIndex?: number;
 }
 
 export interface ChatSession {

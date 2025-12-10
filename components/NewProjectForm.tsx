@@ -1,4 +1,3 @@
-
 import React, { useState, useEffect } from 'react';
 import { ContentFormat, ALL_FORMATS, ContentStatus, BrandVoice, BrandIntelligence, ContentGoal, CONTENT_GOALS } from '../types';
 import { generateContentOutlines, analyzeVideoFrames, classifyContent } from '../services/geminiService';
@@ -25,6 +24,7 @@ import { LightbulbIcon } from './icons/LightbulbIcon';
 import { CheckIcon } from './icons/CheckIcon';
 import { ChevronRightIcon } from './icons/ChevronRightIcon';
 import { ChevronDownIcon } from './icons/ChevronDownIcon';
+import { GeneratingLoader } from './GeneratingLoader';
 
 interface NewProjectFormProps {
     onClose: () => void;
@@ -259,34 +259,38 @@ export const NewProjectForm: React.FC<NewProjectFormProps> = ({ onClose, onProje
             return;
         }
 
-        setIsProcessing(true);
-        let finalSourceText = sourceText;
+        setIsProcessing(true); // Triggers loader overlay
+        
+        // Use a small delay to allow React to render the loader before starting heavy API call
+        setTimeout(async () => {
+            let finalSourceText = sourceText;
 
-        try {
-            const outlines = await generateContentOutlines(finalSourceText, brandVoice, selectedFormats, selectedGoal);
-            
-            const now = new Date().toISOString();
-            const newProject = {
-                id: `proj_${Date.now()}`, name: projectName, sourceText: finalSourceText, brandVoice: brandVoice, createdAt: now, lastModified: now,
-                contentPieces: outlines.map((outline: any) => ({ 
-                    id: `cp_${Date.now()}_${Math.random()}`, 
-                    format: outline.format,
-                    title: outline.title,
-                    content: `**${outline.title}**\n\n*Hook:* ${outline.hook}\n\n*Angle:* ${outline.angle}\n\n*Key Points:*\n${outline.keyPoints.map((p:string) => `- ${p}`).join('\n')}`, 
-                    status: ContentStatus.Draft, 
-                    createdAt: now,
-                    isOutline: true,
-                    outlineData: outline
-                })),
-                groundingMetadata: {}, 
-                goal: selectedGoal
-            };
-            onProjectCreated(newProject);
-        } catch (error) {
-            console.error(error);
-            showToast('Failed to generate outlines.', 'error');
-            setIsProcessing(false);
-        }
+            try {
+                const outlines = await generateContentOutlines(finalSourceText, brandVoice, selectedFormats, selectedGoal);
+                
+                const now = new Date().toISOString();
+                const newProject = {
+                    id: `proj_${Date.now()}`, name: projectName, sourceText: finalSourceText, brandVoice: brandVoice, createdAt: now, lastModified: now,
+                    contentPieces: outlines.map((outline: any) => ({ 
+                        id: `cp_${Date.now()}_${Math.random()}`, 
+                        format: outline.format,
+                        title: outline.title,
+                        content: `**${outline.title}**\n\n*Hook:* ${outline.hook}\n\n*Angle:* ${outline.angle}\n\n*Key Points:*\n${outline.keyPoints.map((p:string) => `- ${p}`).join('\n')}`, 
+                        status: ContentStatus.Draft, 
+                        createdAt: now,
+                        isOutline: true,
+                        outlineData: outline
+                    })),
+                    groundingMetadata: {}, 
+                    goal: selectedGoal
+                };
+                onProjectCreated(newProject);
+            } catch (error) {
+                console.error(error);
+                showToast('Failed to generate outlines.', 'error');
+                setIsProcessing(false);
+            }
+        }, 100);
     };
 
     const renderSourceInput = () => {
@@ -332,6 +336,14 @@ export const NewProjectForm: React.FC<NewProjectFormProps> = ({ onClose, onProje
                     />
                  );
         }
+    }
+
+    if (isProcessing) {
+        return (
+            <div className="fixed inset-0 z-[70] bg-white/90 dark:bg-[#05050A]/95 backdrop-blur-xl flex items-center justify-center animate-fade-in">
+                <GeneratingLoader />
+            </div>
+        );
     }
 
     return (
@@ -567,7 +579,7 @@ export const NewProjectForm: React.FC<NewProjectFormProps> = ({ onClose, onProje
                         ) : (
                             <button type="submit" onClick={handleSubmit} disabled={isProcessing} className="flex items-center gap-2 px-8 py-3 text-sm font-bold text-white bg-gradient-to-r from-indigo-600 to-blue-600 hover:from-indigo-700 hover:to-blue-700 rounded-xl shadow-xl shadow-indigo-500/30 transition-all hover:scale-[1.02] active:scale-95 disabled:opacity-70 disabled:cursor-not-allowed">
                                 {isProcessing ? <SpinnerIcon className="w-5 h-5" /> : <SparklesIcon className="w-5 h-5" />}
-                                {isProcessing ? 'Generating...' : 'Create Project'}
+                                {isProcessing ? 'Processing...' : 'Create Project'}
                             </button>
                         )}
                     </div>

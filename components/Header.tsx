@@ -1,4 +1,3 @@
-
 import React from 'react';
 import { MenuIcon } from './icons/MenuIcon';
 import { Project, Workflow } from '../types';
@@ -14,31 +13,33 @@ interface HeaderProps {
 
 export const Header: React.FC<HeaderProps> = ({ onToggleSidebar, currentProjectName, projects, workflows, onNavigate }) => {
     return (
-        <header className="sticky top-0 z-30 w-full bg-white/70 dark:bg-[#0B0C15]/70 backdrop-blur-md border-b border-gray-100/50 dark:border-gray-800/50 transition-all duration-300">
-            <div className="flex items-center justify-between h-20 px-4 sm:px-6 lg:px-8">
+        <header className="sticky top-0 z-30 w-full bg-transparent pointer-events-none">
+            {/* Soft fade overlay to ensure readability */}
+            <div className="absolute inset-0 bg-gradient-to-b from-[#F3F4F6]/95 via-[#F3F4F6]/70 to-transparent dark:from-[#05050A]/95 dark:via-[#05050A]/70 dark:to-transparent backdrop-blur-[1px] h-32 pointer-events-none"></div>
+            
+            <div className="flex items-center justify-between h-24 px-6 md:px-10 relative pointer-events-auto">
                 <div className="flex items-center gap-4 min-w-0">
-                    {/* Mobile menu button */}
                     <button
                         onClick={onToggleSidebar}
-                        className="lg:hidden text-gray-500 dark:text-gray-400 hover:text-gray-700 dark:hover:text-gray-200 p-2 rounded-lg hover:bg-gray-100 dark:hover:bg-gray-800 transition-colors"
+                        className="lg:hidden text-gray-500 hover:text-gray-900 dark:text-gray-400 dark:hover:text-white p-2 rounded-lg hover:bg-black/5 dark:hover:bg-white/10 transition-colors"
                     >
                         <span className="sr-only">Open sidebar</span>
                         <MenuIcon className="w-6 h-6" />
                     </button>
                     
-                    {/* Project Name (or placeholder) */}
                     <div className="hidden lg:block flex-1 min-w-0 animate-fade-in">
-                        <h2 className="text-lg font-bold text-gray-900 dark:text-white truncate tracking-tight">
-                            {currentProjectName || 'Dashboard'}
-                        </h2>
+                        {currentProjectName && (
+                            <h2 className="text-lg font-bold text-gray-900 dark:text-white truncate tracking-tight flex items-center gap-2">
+                                <span className="text-gray-400 dark:text-gray-500 font-normal">/</span> {currentProjectName}
+                            </h2>
+                        )}
                     </div>
                 </div>
 
-                <div className="flex-1 flex justify-center px-6 max-w-2xl">
+                <div className="flex-1 flex justify-center px-6 max-w-xl">
                     <SearchBar projects={projects} workflows={workflows} onNavigate={onNavigate} />
                 </div>
 
-                {/* Empty div for balance, or future user avatar */}
                 <div className="hidden lg:block w-40 flex-shrink-0" />
             </div>
         </header>

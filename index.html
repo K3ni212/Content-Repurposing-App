@@ -8,7 +8,7 @@
     <script src="https://cdn.tailwindcss.com"></script>
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&family=Plus+Jakarta+Sans:wght@400;500;600;700&display=swap" rel="stylesheet">
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&family=Plus+Jakarta+Sans:wght@400;500;600;700;800&display=swap" rel="stylesheet">
     <script>
       tailwind.config = {
         darkMode: 'class',
@@ -29,13 +29,18 @@
                 600: '#4B5563',
                 700: '#374151',
                 800: '#1F2937',
+                850: '#161821', // Custom Card bg
                 900: '#111827',
-                950: '#0B0C15', // Deep Obsidian Custom
+                950: '#05050A', // Deep Obsidian Custom
               },
               indigo: {
+                50: '#EEF2FF',
+                100: '#E0E7FF',
                 500: '#6366F1',
+                550: '#565ADD', // Custom active state
                 600: '#4F46E5',
                 700: '#4338CA',
+                900: '#312E81',
               },
               violet: {
                 500: '#8B5CF6',
@@ -43,12 +48,18 @@
               }
             },
             boxShadow: {
-              'glass': '0 8px 32px 0 rgba(0, 0, 0, 0.37)',
-              'glow': '0 0 20px rgba(99, 102, 241, 0.5)',
-              'glow-lg': '0 0 40px rgba(139, 92, 246, 0.3)',
+              'glass': '0 8px 32px 0 rgba(0, 0, 0, 0.1)',
+              'glass-sm': '0 4px 16px 0 rgba(0, 0, 0, 0.05)',
+              'glow': '0 0 20px rgba(99, 102, 241, 0.6)',
+              'glow-sm': '0 0 10px rgba(99, 102, 241, 0.4)',
+              'glow-lg': '0 0 40px rgba(139, 92, 246, 0.4)',
+              'card': '0 10px 30px -5px rgba(0, 0, 0, 0.1)',
             },
             backgroundImage: {
-              'glass-gradient': 'linear-gradient(135deg, rgba(255, 255, 255, 0.05) 0%, rgba(255, 255, 255, 0.01) 100%)',
+              'glass-gradient': 'linear-gradient(145deg, rgba(255, 255, 255, 0.6) 0%, rgba(255, 255, 255, 0.2) 100%)',
+              'glass-gradient-dark': 'linear-gradient(145deg, rgba(25, 27, 35, 0.6) 0%, rgba(15, 16, 20, 0.4) 100%)',
+              'mesh': 'radial-gradient(at 0% 0%, hsla(253,16%,7%,1) 0, transparent 50%), radial-gradient(at 50% 0%, hsla(225,39%,30%,1) 0, transparent 50%), radial-gradient(at 100% 0%, hsla(339,49%,30%,1) 0, transparent 50%)',
+              'mesh-light': 'radial-gradient(at 0% 0%, hsla(253,16%,90%,1) 0, transparent 50%), radial-gradient(at 50% 0%, hsla(225,39%,95%,1) 0, transparent 50%), radial-gradient(at 100% 0%, hsla(339,49%,95%,1) 0, transparent 50%)',
             },
             keyframes: {
               fadeIn: {
@@ -63,32 +74,28 @@
                 '0%': { opacity: '0', transform: 'scale(0.95)' },
                 '100%': { opacity: '1', transform: 'scale(1)' },
               },
-              slideUp: {
-                '0%': { opacity: '0', transform: 'translateY(20px)' },
-                '100%': { opacity: '1', transform: 'translateY(0)' },
-              },
               shimmer: {
                 '0%': { backgroundPosition: '-200% 0' },
                 '100%': { backgroundPosition: '200% 0' }
               },
-              gradient: {
-                '0%': { backgroundPosition: '0% 50%' },
-                '50%': { backgroundPosition: '100% 50%' },
-                '100%': { backgroundPosition: '0% 50%' },
-              },
               pulseGlow: {
                 '0%, 100%': { boxShadow: '0 0 10px rgba(99, 102, 241, 0.2)' },
-                '50%': { boxShadow: '0 0 25px rgba(99, 102, 241, 0.6)' },
+                '50%': { boxShadow: '0 0 25px rgba(99, 102, 241, 0.5)' },
+              },
+              blob: {
+                "0%": { transform: "translate(0px, 0px) scale(1)" },
+                "33%": { transform: "translate(30px, -50px) scale(1.1)" },
+                "66%": { transform: "translate(-20px, 20px) scale(0.9)" },
+                "100%": { transform: "translate(0px, 0px) scale(1)" }
               }
             },
             animation: {
               'fade-in': 'fadeIn 0.4s cubic-bezier(0.16, 1, 0.3, 1) forwards',
               'scale-in': 'scaleIn 0.3s cubic-bezier(0.16, 1, 0.3, 1) forwards',
-              'slide-up': 'slideUp 0.5s cubic-bezier(0.16, 1, 0.3, 1) forwards',
               'float': 'float 6s ease-in-out infinite',
               'shimmer': 'shimmer 2s infinite linear',
-              'gradient': 'gradient 15s ease infinite',
               'pulse-glow': 'pulseGlow 3s infinite',
+              'blob': "blob 7s infinite",
             }
           }
         }
@@ -97,35 +104,73 @@
     <style>
       /* Custom Scrollbar for Glassmorphism */
       ::-webkit-scrollbar {
-        width: 8px;
-        height: 8px;
+        width: 6px;
+        height: 6px;
       }
       ::-webkit-scrollbar-track {
-        background: rgba(0, 0, 0, 0.1); 
+        background: transparent; 
       }
       ::-webkit-scrollbar-thumb {
-        background: rgba(255, 255, 255, 0.1); 
-        border-radius: 4px;
+        background: rgba(0, 0, 0, 0.1); 
+        border-radius: 10px;
+      }
+      .dark ::-webkit-scrollbar-thumb {
+        background: rgba(255, 255, 255, 0.1);
       }
       ::-webkit-scrollbar-thumb:hover {
-        background: rgba(255, 255, 255, 0.2); 
+        background: rgba(0, 0, 0, 0.2); 
+      }
+      .dark ::-webkit-scrollbar-thumb:hover {
+        background: rgba(255, 255, 255, 0.2);
       }
       
       body {
-        background-color: #0B0C15; /* Fallback */
-        color: #f3f4f6;
+        background-color: #F3F4F6;
+        transition: background-color 0.5s ease;
+      }
+      .dark body {
+        background-color: #05050A; /* Deep Obsidian */
       }
       
+      /* Glass Panel - The "Workly" Sidebar Look */
       .glass-panel {
-        background: rgba(255, 255, 255, 0.03);
-        backdrop-filter: blur(16px);
-        -webkit-backdrop-filter: blur(16px);
-        border: 1px solid rgba(255, 255, 255, 0.08);
+        background: rgba(255, 255, 255, 0.7);
+        backdrop-filter: blur(20px);
+        -webkit-backdrop-filter: blur(20px);
+        border-right: 1px solid rgba(255, 255, 255, 0.5);
       }
       
-      .glass-panel-hover:hover {
-        background: rgba(255, 255, 255, 0.06);
-        border-color: rgba(255, 255, 255, 0.15);
+      .dark .glass-panel {
+        background: rgba(15, 16, 22, 0.6);
+        border-right: 1px solid rgba(255, 255, 255, 0.08);
+        box-shadow: 20px 0 40px rgba(0,0,0,0.2);
+      }
+      
+      /* Glass Card - High Visibility */
+      .glass-card {
+        background: #ffffff;
+        border: 1px solid rgba(0,0,0,0.05);
+        box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.05), 0 2px 4px -1px rgba(0, 0, 0, 0.03);
+      }
+      
+      .dark .glass-card {
+        background: rgba(30, 32, 40, 0.6);
+        backdrop-filter: blur(12px);
+        border: 1px solid rgba(255, 255, 255, 0.08);
+        box-shadow: 0 8px 32px 0 rgba(0, 0, 0, 0.2);
+      }
+      
+      .glass-card:hover {
+        transform: translateY(-2px);
+        transition: all 0.3s ease;
+      }
+      
+      /* Utilities */
+      .text-glow {
+        text-shadow: 0 0 10px rgba(255, 255, 255, 0.1);
+      }
+      .dark .text-glow {
+        text-shadow: 0 0 20px rgba(99, 102, 241, 0.3);
       }
     </style>
   <script type="importmap">
@@ -141,7 +186,7 @@
 }
 </script>
 </head>
-  <body class="font-body antialiased selection:bg-indigo-500 selection:text-white overflow-hidden">
+  <body class="font-body antialiased selection:bg-indigo-500 selection:text-white overflow-hidden text-gray-900 dark:text-gray-100">
     <div id="root"></div>
     <script type="module" src="/index.tsx"></script>
   </body>

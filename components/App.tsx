@@ -1,4 +1,3 @@
-
 import React, { useState, useEffect, useRef, useMemo, useCallback } from 'react';
 import { Sidebar } from './Sidebar';
 import { Header } from './Header';
@@ -26,9 +25,10 @@ import { ContentPlannerPage } from './ContentPlannerPage';
 import { TeamValueWidget } from './TeamValueWidget';
 import { AnalyticsPage } from './AnalyticsPage';
 import { BrandStudioPage } from './BrandStudioPage';
+import { AgentsPage } from './AgentsPage';
 
 const defaultSettings: Settings = {
-    theme: 'dark', 
+    theme: 'light',
     hasCompletedOnboarding: false,
     userRole: '',
     companySize: '',
@@ -135,7 +135,6 @@ const App: React.FC = () => {
                  if (savedProjectsJSON) {
                     const parsedProjects = JSON.parse(savedProjectsJSON);
                     const sanitizedProjects = Array.isArray(parsedProjects) ? parsedProjects.map((p: any) => {
-                        // ... existing sanitization logic ...
                         return p;
                     }).filter((p: any) => p !== null) : [];
                     setProjects(sanitizedProjects); 
@@ -185,7 +184,6 @@ const App: React.FC = () => {
 
     const showToast = useCallback((message: string, type: 'success' | 'error', onUndo?: () => void) => setToast({ message, type, onUndo }), []);
 
-    // ... Auth handlers (handleSignUp, handleLogin, etc.) kept same as before ... 
     const handleSignUp = useCallback(async (name: string, email: string, password: string) => {
         if (users[email]) {
             showToast('An account with this email already exists. Please sign in.', 'error');
@@ -264,8 +262,6 @@ const App: React.FC = () => {
         showToast('You have been logged out.', 'success');
     }, [showToast]);
 
-    // ... Project handlers ...
-
     const handleNavigate = useCallback((view: string, id?: string) => {
         if (view === 'new-project') {
             setIsNewProjectFormOpen(true);
@@ -283,7 +279,8 @@ const App: React.FC = () => {
 
     const handleCreateProject = useCallback((newProject: Project) => {
         setIsLoading(true);
-        // Show loading screen for 3 seconds to ensure user sees the "generation" process
+        // Loader is shown by isNewProjectFormOpen=true + isLoading=true state in renderMainContent
+        // We delay the update to simulate processing
         setTimeout(() => {
             setProjects(prev => [newProject, ...prev]);
             setSelectedProjectId(newProject.id);
@@ -422,7 +419,7 @@ const App: React.FC = () => {
         : null;
 
     const renderMainContent = () => {
-        if (isLoading && isNewProjectFormOpen) return <div className="w-full h-full flex items-center justify-center"><GeneratingLoader /></div>;
+        if (isLoading && isNewProjectFormOpen) return <div className="fixed inset-0 z-[100] flex items-center justify-center bg-black/50 backdrop-blur-sm"><GeneratingLoader /></div>;
         
         if (currentView.startsWith('coming-soon-')) {
             const feature = currentView.split('coming-soon-')[1];
@@ -431,17 +428,18 @@ const App: React.FC = () => {
 
         switch(currentView) {
             case 'kanban':
-                if (selectedProject) return <KanbanPage project={selectedProject} onBack={() => { setCurrentView('projects'); setSelectedProjectId(null); }} onDrop={()=>{}} onCardClick={setSelectedContent} onUpdateProject={()=>{}} />;
+                if (selectedProject) return <KanbanPage project={selectedProject} onBack={() => { setCurrentView('projects'); setSelectedProjectId(null); }} onDrop={()=>{}} onCardClick={setSelectedContent} onUpdateProject={(updates) => { setProjects(prev => prev.map(p => p.id === selectedProjectId ? { ...p, ...updates } : p)) }} />;
                 return null;
             case 'chat': return <ChatPage currentUser={currentUser} />;
             case 'brand-studio': return <BrandStudioPage brandVoices={brandVoices} brandIntelligence={brandIntelligence} />;
+            case 'agents': return <AgentsPage brandIntelligence={brandIntelligence} showToast={showToast} />;
             case 'workflow': return <WorkflowPage workflows={workflows} onSave={handleSaveWorkflow} onDelete={handleDeleteWorkflow} brandIntelligence={brandIntelligence} onCreateProject={handleCreateProjectFromTemplate} />;
             case 'analytics': return <AnalyticsPage projects={projects} />;
             case 'export': return <ExportPage projects={projects} onUpdateContent={handleUpdateContentPiece} showToast={showToast} />;
             case 'planner': return <ContentPlannerPage projects={projects} onUpdateContent={handleUpdateContentPiece} onCardClick={(c) => { setSelectedContent(c); setIsNewProjectFormOpen(false); }} />;
             case 'settings': return <SettingsPage settings={settings} onUpdateSettings={setSettings} userName={currentUserDetails?.name} userEmail={currentUser} brandIntelligence={brandIntelligence} onUpdateBrandIntelligence={setBrandIntelligence} />;
             case 'projects': default: return (
-                 <div className="p-6 md:p-10 max-w-7xl mx-auto animate-fade-in">
+                 <div className="p-6 md:p-10 max-w-7xl mx-auto animate-fade-in relative z-10">
                      <div className="flex flex-col md:flex-row justify-between items-end mb-12">
                         <div>
                             <h1 className="text-4xl font-extrabold text-gray-900 dark:text-white tracking-tight leading-tight">
@@ -452,7 +450,7 @@ const App: React.FC = () => {
                             </p>
                         </div>
                         <div className="flex gap-3 mt-4 md:mt-0">
-                            <button onClick={() => { setIsNewProjectFormOpen(true); setNewProjectInitialTemplate(null); }} className="bg-gradient-to-r from-indigo-600 to-blue-600 hover:from-indigo-700 hover:to-blue-700 text-white font-bold py-3 px-6 rounded-xl shadow-lg shadow-indigo-600/30 transition-all hover:scale-105 flex items-center">
+                            <button onClick={() => { setIsNewProjectFormOpen(true); setNewProjectInitialTemplate(null); }} className="bg-indigo-600 hover:bg-indigo-700 text-white font-bold py-3 px-6 rounded-xl transition-all hover:scale-105 flex items-center shadow-lg shadow-indigo-500/20">
                                 <span className="mr-2 text-xl leading-none">+</span> New Project
                             </button>
                         </div>
@@ -477,10 +475,11 @@ const App: React.FC = () => {
     };
 
     return (
-        <div className={`flex h-screen bg-[#FAFAFA] dark:bg-[#0B0C15] text-gray-900 dark:text-gray-100 overflow-hidden relative selection:bg-indigo-500 selection:text-white transition-colors duration-500`}>
+        <div className={`flex h-screen bg-[#F3F4F6] dark:bg-[#05050A] text-gray-900 dark:text-gray-100 overflow-hidden relative selection:bg-indigo-500 selection:text-white transition-colors duration-500`}>
             {/* Ambient Background Glows */}
-            <div className="absolute top-0 left-0 w-[800px] h-[800px] bg-indigo-500/5 dark:bg-indigo-900/10 rounded-full blur-[120px] -translate-x-1/2 -translate-y-1/2 pointer-events-none"></div>
-            <div className="absolute bottom-0 right-0 w-[600px] h-[600px] bg-purple-500/5 dark:bg-violet-900/10 rounded-full blur-[100px] translate-x-1/3 translate-y-1/3 pointer-events-none"></div>
+            <div className="fixed top-[-10%] left-[-10%] w-[50%] h-[50%] bg-indigo-200/40 dark:bg-indigo-900/10 rounded-full blur-[150px] pointer-events-none animate-pulse"></div>
+            <div className="fixed bottom-[-10%] right-[-10%] w-[50%] h-[50%] bg-violet-200/40 dark:bg-violet-900/10 rounded-full blur-[150px] pointer-events-none"></div>
+            <div className="fixed top-[40%] left-[40%] w-[30%] h-[30%] bg-blue-200/30 dark:bg-blue-900/05 rounded-full blur-[120px] pointer-events-none animate-pulse delay-1000"></div>
 
             <Sidebar currentView={currentView} onNavigate={handleNavigate} isSidebarOpen={isSidebarOpen} onClose={() => setIsSidebarOpen(false)} onLogout={handleLogout} isSidebarCollapsed={isMainSidebarCollapsed} onToggleCollapse={() => setIsMainSidebarCollapsed(prev => !prev)} userRole={settings.userRole} enabledFeatures={settings.enabledFeatures} />
             

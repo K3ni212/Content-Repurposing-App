@@ -35,33 +35,40 @@ const formatIcons: Record<string, React.FC<{className?: string}>> = {
   [ContentFormat.PodcastSnippet]: MicrophoneIcon,
 };
 
-const formatColors: Record<string, string> = {
-    [ContentFormat.LinkedIn]: 'text-blue-700',
-    [ContentFormat.XThread]: 'text-gray-800 dark:text-white',
-    [ContentFormat.Email]: 'text-red-500',
-    [ContentFormat.Carousel]: 'text-purple-500',
-    [ContentFormat.Quote]: 'text-yellow-500',
-    [ContentFormat.TikTok]: 'text-black dark:text-white',
-    [ContentFormat.InstagramReels]: 'text-pink-600',
-    [ContentFormat.InstagramFeed]: 'text-pink-500',
-    [ContentFormat.Facebook]: 'text-blue-800',
+const formatStyles: Record<string, { bg: string, text: string, border: string }> = {
+    [ContentFormat.LinkedIn]: { bg: 'bg-[#0077b5]/10', text: 'text-[#0077b5]', border: 'border-[#0077b5]/20' },
+    [ContentFormat.XThread]: { bg: 'bg-black/5 dark:bg-white/10', text: 'text-gray-900 dark:text-white', border: 'border-black/10 dark:border-white/20' },
+    [ContentFormat.Email]: { bg: 'bg-orange-500/10', text: 'text-orange-600', border: 'border-orange-500/20' },
+    [ContentFormat.InstagramReels]: { bg: 'bg-pink-500/10', text: 'text-pink-500', border: 'border-pink-500/20' },
+    [ContentFormat.YouTubeShort]: { bg: 'bg-red-600/10', text: 'text-red-600', border: 'border-red-600/20' },
 }
 
-const statusColors: Record<ContentStatus, string> = {
-  [ContentStatus.Draft]: 'bg-gray-200 text-gray-800 dark:bg-gray-700 dark:text-gray-200',
-  [ContentStatus.Editing]: 'bg-yellow-100 text-yellow-800 dark:bg-yellow-400/20 dark:text-yellow-300',
-  [ContentStatus.Approved]: 'bg-emerald-100 text-emerald-800 dark:bg-emerald-500/20 dark:text-emerald-300',
-  [ContentStatus.ReadyToSchedule]: 'bg-purple-100 text-purple-800 dark:bg-purple-400/20 dark:text-purple-300',
-  [ContentStatus.Exported]: 'bg-blue-100 text-blue-800 dark:bg-blue-400/20 dark:text-blue-300',
+const formatBorderColors: Record<string, string> = {
+    [ContentFormat.LinkedIn]: 'border-l-[#0077b5]',
+    [ContentFormat.XThread]: 'border-l-black dark:border-l-white',
+    [ContentFormat.Email]: 'border-l-orange-500',
+    [ContentFormat.InstagramReels]: 'border-l-pink-500',
+    [ContentFormat.YouTubeShort]: 'border-l-red-600',
+    [ContentFormat.TikTok]: 'border-l-[#00f2ea]',
+    [ContentFormat.Facebook]: 'border-l-[#1877F2]',
+    [ContentFormat.Blog]: 'border-l-emerald-500',
+}
+
+const statusStyles: Record<ContentStatus, string> = {
+  [ContentStatus.Draft]: 'bg-gray-100 text-gray-600 border border-gray-200 dark:bg-gray-800 dark:text-gray-400 dark:border-gray-700',
+  [ContentStatus.Editing]: 'bg-yellow-50 text-yellow-700 border border-yellow-200 dark:bg-yellow-500/20 dark:text-yellow-200 dark:border-yellow-500/30',
+  [ContentStatus.Approved]: 'bg-emerald-50 text-emerald-700 border border-emerald-200 dark:bg-emerald-500/20 dark:text-emerald-300 dark:border-emerald-500/30',
+  [ContentStatus.ReadyToSchedule]: 'bg-blue-50 text-blue-700 border border-blue-200 dark:bg-blue-500/20 dark:text-blue-300 dark:border-blue-500/30',
+  [ContentStatus.Exported]: 'bg-purple-50 text-purple-700 border border-purple-200 dark:bg-purple-500/20 dark:text-purple-300 dark:border-purple-500/30',
 };
 
-
 export const ContentCard: React.FC<ContentCardProps> = ({ content, onClick }) => {
-  const Icon = formatIcons[content.format];
+  const Icon = formatIcons[content.format] || MegaphoneIcon;
+  const style = formatStyles[content.format] || { bg: 'bg-indigo-50 dark:bg-indigo-500/20', text: 'text-indigo-600 dark:text-indigo-300', border: 'border-indigo-200 dark:border-white/10' };
+  const borderClass = formatBorderColors[content.format] || 'border-l-indigo-500';
 
   const handleDragStart = (e: React.DragEvent<HTMLDivElement>) => {
     e.dataTransfer.setData('contentId', content.id);
-    // Create a ghost image that looks a bit transparent
     const target = e.target as HTMLElement;
     target.style.opacity = '0.5';
   };
@@ -70,12 +77,6 @@ export const ContentCard: React.FC<ContentCardProps> = ({ content, onClick }) =>
       const target = e.target as HTMLElement;
       target.style.opacity = '1';
   }
-  
-  const getSmartScoreColor = (score: number) => {
-    if (score > 85) return 'text-emerald-500';
-    if (score > 70) return 'text-yellow-500';
-    return 'text-red-500';
-  }
 
   return (
     <div
@@ -83,30 +84,39 @@ export const ContentCard: React.FC<ContentCardProps> = ({ content, onClick }) =>
       onDragStart={handleDragStart}
       onDragEnd={handleDragEnd}
       onClick={onClick}
-      className="bg-white dark:bg-gray-800 rounded-lg p-4 shadow-sm cursor-pointer hover:shadow-md hover:scale-[1.02] hover:border-blue-600 border-2 border-transparent transition-all duration-200 ease-out mb-4 animate-fade-in active:scale-[0.98]"
+      className={`group relative bg-white dark:bg-[#1E202E] rounded-xl p-4 
+        border border-gray-200 dark:border-gray-700/50 ${borderClass} border-l-[4px]
+        cursor-pointer 
+        shadow-sm hover:shadow-lg dark:shadow-black/20 hover:-translate-y-1 
+        transition-all duration-300 ease-out mb-3 active:scale-[0.98]
+      `}
     >
-      <div className="flex justify-between items-start">
-        <h4 className="font-bold text-gray-800 dark:text-white pr-2 flex-1">{content.title}</h4>
-        <div className={`flex-shrink-0 ${formatColors[content.format]}`}>
-          {Icon && <Icon className="w-5 h-5 transform transition-transform hover:rotate-12" />}
+      <div className="flex justify-between items-start mb-3">
+        <div className="flex-1 pr-3">
+            <h4 className="font-bold text-gray-900 dark:text-gray-100 text-sm leading-snug group-hover:text-indigo-600 dark:group-hover:text-indigo-400 transition-colors line-clamp-2">
+                {content.title}
+            </h4>
+        </div>
+        <div className={`flex-shrink-0 p-1.5 rounded-lg ${style.bg} ${style.text} ${style.border}`}>
+          {Icon && <Icon className="w-3.5 h-3.5" />}
         </div>
       </div>
-      <p className="text-sm text-gray-600 dark:text-gray-300 mt-2 line-clamp-2">
+      
+      <p className="text-xs text-gray-600 dark:text-gray-400 mb-4 line-clamp-3 leading-relaxed font-medium">
         {content.content}
       </p>
-      <div className="flex justify-between items-center mt-4">
-        <span className={`text-xs font-semibold px-2 py-1 rounded-full ${statusColors[content.status]}`}>
+      
+      <div className="flex justify-between items-center pt-3 border-t border-gray-100 dark:border-white/5">
+        <span className={`text-[10px] font-bold uppercase tracking-wider px-2 py-1 rounded-md ${statusStyles[content.status]}`}>
           {content.status}
         </span>
-        <div className="flex items-center gap-2">
-           {content.smartScore && (
-                <div className={`flex items-center gap-1 text-xs font-bold ${getSmartScoreColor(content.smartScore)}`}>
-                    <StarIcon className="w-3 h-3" filled />
-                    <span>{content.smartScore}</span>
-                </div>
-            )}
-            <span className="text-xs text-gray-400">{content.format}</span>
-        </div>
+        
+        {content.smartScore && (
+            <div className="flex items-center gap-1 text-[10px] font-bold text-gray-600 dark:text-gray-300 bg-gray-100 dark:bg-white/5 px-2 py-1 rounded-full border border-gray-200 dark:border-white/5">
+                <StarIcon className="w-3 h-3 text-yellow-500" filled />
+                <span>{content.smartScore}</span>
+            </div>
+        )}
       </div>
     </div>
   );

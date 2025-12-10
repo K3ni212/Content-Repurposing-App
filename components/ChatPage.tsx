@@ -1,7 +1,7 @@
 
 import React, { useState, useEffect, useRef } from 'react';
 import { GoogleGenAI, Chat, LiveServerMessage, Modality, Blob } from "@google/genai";
-import { ChatMessage, ChatSession } from '../types';
+import { ChatMessage, ChatSession, ContentFormat } from '../types';
 import { v4 as uuidv4 } from 'uuid';
 import { PlusIcon } from './icons/PlusIcon';
 import { ChatIcon } from './icons/ChatIcon';
@@ -13,6 +13,19 @@ import { XCloseIcon } from './icons/XCloseIcon';
 import { TrashIcon } from './icons/TrashIcon';
 import { SparklesIcon } from './icons/SparklesIcon';
 import { CheckIcon } from './icons/CheckIcon';
+import { FeatherIcon } from './icons/FeatherIcon';
+import { ImageIcon } from './icons/ImageIcon';
+import { UserIcon } from './icons/UserIcon';
+import { UploadIcon } from './icons/UploadIcon';
+import { SearchIcon } from './icons/SearchIcon';
+import { ChevronRightIcon } from './icons/ChevronRightIcon';
+import { ChevronLeftIcon } from './icons/ChevronLeftIcon';
+import { DotsVerticalIcon } from './icons/DotsVerticalIcon';
+import { CopyIcon } from './icons/CopyIcon';
+import { ThumbsUpIcon } from './icons/ThumbsUpIcon';
+import { ThumbsDownIcon } from './icons/ThumbsDownIcon';
+import { RefreshIcon } from './icons/RefreshIcon';
+import { ShareIcon } from './icons/ShareIcon';
 
 const ai = new GoogleGenAI({ apiKey: process.env.API_KEY });
 
@@ -47,7 +60,7 @@ export const ChatPage: React.FC<ChatPageProps> = ({ currentUser }) => {
 
   const [chatSessions, setChatSessions] = useState<ChatSession[]>([]);
   const [activeSessionId, setActiveSessionId] = useState<string | null>(null);
-  const [isHistorySidebarOpen, setIsHistorySidebarOpen] = useState(false);
+  const [isHistorySidebarOpen, setIsHistorySidebarOpen] = useState(true); 
   
   const [chat, setChat] = useState<Chat | null>(null);
   const [input, setInput] = useState('');
@@ -57,7 +70,6 @@ export const ChatPage: React.FC<ChatPageProps> = ({ currentUser }) => {
   // Tools State
   const [isThinkingMode, setIsThinkingMode] = useState(false);
   const [useSearch, setUseSearch] = useState(false);
-  const [isToolsOpen, setIsToolsOpen] = useState(false);
   
   // Upload State
   const [attachment, setAttachment] = useState<{ data: string, mimeType: string, name: string } | null>(null);
@@ -78,7 +90,6 @@ export const ChatPage: React.FC<ChatPageProps> = ({ currentUser }) => {
 
   const activeSession = chatSessions.find(s => s.id === activeSessionId);
   
-  // Load and initialize sessions on mount
   useEffect(() => {
     const savedSessions = localStorage.getItem(sessionsKey);
     const parsedSessions = savedSessions ? JSON.parse(savedSessions) : [];
@@ -87,13 +98,12 @@ export const ChatPage: React.FC<ChatPageProps> = ({ currentUser }) => {
         setChatSessions(parsedSessions);
         setActiveSessionId(parsedSessions[0].id);
     } else {
-        const newSession: ChatSession = { id: uuidv4(), title: 'New Chat', createdAt: new Date().toISOString(), messages: [] };
+        const newSession: ChatSession = { id: uuidv4(), title: 'New Project', createdAt: new Date().toISOString(), messages: [] };
         setChatSessions([newSession]);
         setActiveSessionId(newSession.id);
     }
   }, [currentUser]);
 
-  // Save sessions to local storage whenever they change
   useEffect(() => {
     if (chatSessions.length > 0) {
       localStorage.setItem(sessionsKey, JSON.stringify(chatSessions));
@@ -124,11 +134,12 @@ export const ChatPage: React.FC<ChatPageProps> = ({ currentUser }) => {
 
     const chatInstance = ai.chats.create({
       model,
-      history: activeSession.messages,
+      // Pass only standard fields to SDK to avoid type errors, but maintain our extended structure in state
+      history: activeSession.messages.map(m => ({ role: m.role, parts: m.parts })),
       config
     });
     setChat(chatInstance);
-  }, [activeSessionId, chatSessions, isThinkingMode, useSearch, customInstructions]);
+  }, [activeSessionId, chatSessions.length, isThinkingMode, useSearch, customInstructions]);
 
   useEffect(() => {
     messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
@@ -218,18 +229,18 @@ export const ChatPage: React.FC<ChatPageProps> = ({ currentUser }) => {
   const handleNewChat = () => {
     const newSession: ChatSession = {
         id: uuidv4(),
-        title: 'New Chat',
+        title: 'New Project',
         createdAt: new Date().toISOString(),
         messages: []
     };
     setChatSessions(prev => [newSession, ...prev]);
     setActiveSessionId(newSession.id);
-    setIsHistorySidebarOpen(false);
+    if (window.innerWidth < 1024) setIsHistorySidebarOpen(false);
   };
   
   const handleSelectSession = (sessionId: string) => {
     setActiveSessionId(sessionId);
-    setIsHistorySidebarOpen(false);
+    if (window.innerWidth < 1024) setIsHistorySidebarOpen(false);
   };
 
   const handleDeleteSession = (e: React.MouseEvent, sessionId: string) => {
@@ -301,7 +312,7 @@ export const ChatPage: React.FC<ChatPageProps> = ({ currentUser }) => {
     setChatSessions(prev => prev.map(session => {
         if (session.id === activeSessionId) {
             const updatedMessages = [...session.messages, userInput];
-            const updatedTitle = session.messages.length === 0 ? messageToSend.substring(0, 40) + (messageToSend.length > 40 ? '...' : '') : session.title;
+            const updatedTitle = session.messages.length === 0 ? messageToSend.substring(0, 30) : session.title;
             return { ...session, title: updatedTitle, messages: updatedMessages };
         }
         return session;
@@ -312,14 +323,19 @@ export const ChatPage: React.FC<ChatPageProps> = ({ currentUser }) => {
         const responseStream = await chat.sendMessageStream({ message: messageContent });
         let fullResponse = '';
 
-        setChatSessions(prev => prev.map(s => s.id === activeSessionId ? { ...s, messages: [...s.messages, { role: 'model', parts: [{ text: ''}]}] } : s));
+        setChatSessions(prev => prev.map(s => s.id === activeSessionId ? { ...s, messages: [...s.messages, { role: 'model', parts: [{ text: ''}], versions: [], currentVersionIndex: 0 }] } : s));
         
         for await (const chunk of responseStream) {
             fullResponse += chunk.text;
             setChatSessions(prev => prev.map(s => {
                 if (s.id === activeSessionId) {
                     const newMessages = [...s.messages];
-                    newMessages[newMessages.length - 1] = { role: 'model', parts: [{ text: fullResponse }] };
+                    newMessages[newMessages.length - 1] = { 
+                        role: 'model', 
+                        parts: [{ text: fullResponse }],
+                        versions: [fullResponse], // Init version history
+                        currentVersionIndex: 0 
+                    };
                     return { ...s, messages: newMessages };
                 }
                 return s;
@@ -334,136 +350,297 @@ export const ChatPage: React.FC<ChatPageProps> = ({ currentUser }) => {
     }
   };
 
-  // Border Gradient Colors
-  let gradientColors = '#E2E8F0_0%,#E2E8F0_100%'; // Default gray
-  if (isThinkingMode) {
-      gradientColors = '#0000_0%,#A855F7_50%,#0000_100%'; // Purple for Thinking
-  } else if (useSearch) {
-      gradientColors = '#0000_0%,#EAB308_50%,#0000_100%'; // Yellow for Search
+  const handleRegenerate = async (msgIndex: number) => {
+      if (!activeSessionId || !chat || isLoading) return;
+      
+      const session = chatSessions.find(s => s.id === activeSessionId);
+      if (!session || msgIndex <= 0) return;
+
+      const userMsg = session.messages[msgIndex - 1];
+      if (userMsg.role !== 'user') return;
+
+      setIsLoading(true);
+      
+      // We need to re-create a temporary chat history up to the user message
+      const historyUpToUser = session.messages.slice(0, msgIndex - 1).map(m => ({ role: m.role, parts: m.parts }));
+      
+      try {
+          // Re-instantiate chat with history context for regeneration
+          const tempChat = ai.chats.create({
+              model: isThinkingMode ? 'gemini-2.5-pro' : 'gemini-2.5-flash-lite',
+              history: historyUpToUser,
+              config: chat.params // Reuse config
+          });
+
+          // Re-send user message
+          const userContent = userMsg.parts.length === 1 && userMsg.parts[0].text ? userMsg.parts[0].text : { parts: userMsg.parts };
+          const responseStream = await tempChat.sendMessageStream({ message: userContent as any });
+          
+          let newVersionText = '';
+          
+          for await (const chunk of responseStream) {
+              newVersionText += chunk.text;
+              setChatSessions(prev => prev.map(s => {
+                  if (s.id === activeSessionId) {
+                      const newMessages = [...s.messages];
+                      const currentMsg = newMessages[msgIndex];
+                      const versions = currentMsg.versions ? [...currentMsg.versions] : [currentMsg.parts[0].text];
+                      
+                      // If we haven't added the new version placeholder yet
+                      if (versions.length <= (currentMsg.currentVersionIndex || 0) + 1) {
+                          versions.push(newVersionText);
+                      } else {
+                          // Update last version
+                          versions[versions.length - 1] = newVersionText;
+                      }
+
+                      newMessages[msgIndex] = {
+                          ...currentMsg,
+                          parts: [{ text: newVersionText }],
+                          versions: versions,
+                          currentVersionIndex: versions.length - 1
+                      };
+                      return { ...s, messages: newMessages };
+                  }
+                  return s;
+              }));
+          }
+      } catch (error) {
+          console.error("Regeneration failed", error);
+      } finally {
+          setIsLoading(false);
+      }
+  };
+
+  const handleVersionChange = (msgIndex: number, direction: 'prev' | 'next') => {
+      setChatSessions(prev => prev.map(s => {
+          if (s.id === activeSessionId) {
+              const newMessages = [...s.messages];
+              const msg = newMessages[msgIndex];
+              if (!msg.versions || msg.versions.length <= 1) return s;
+
+              const currentIndex = msg.currentVersionIndex || 0;
+              let newIndex = direction === 'prev' ? currentIndex - 1 : currentIndex + 1;
+              
+              if (newIndex < 0) newIndex = 0;
+              if (newIndex >= msg.versions.length) newIndex = msg.versions.length - 1;
+
+              newMessages[msgIndex] = {
+                  ...msg,
+                  parts: [{ text: msg.versions[newIndex] }],
+                  currentVersionIndex: newIndex
+              };
+              return { ...s, messages: newMessages };
+          }
+          return s;
+      }));
+  };
+
+  const handleStarterClick = (prompt: string) => {
+      setInput(prompt);
+      const textarea = document.querySelector('textarea');
+      if(textarea) textarea.focus();
+  }
+
+  const handleCopy = (text: string) => {
+      navigator.clipboard.writeText(text);
+      // Optional: show small tooltip or icon change
   }
 
   return (
-    <div className="relative flex flex-col h-full animate-fade-in bg-gradient-to-br from-indigo-100/40 via-white to-purple-100/40 dark:from-indigo-900/20 dark:via-[#0B0C15] dark:to-purple-900/20 animate-gradient bg-[length:400%_400%] overflow-hidden">
-        {/* History Sidebar - Glass */}
-        <div className={`fixed inset-0 z-40 transition-opacity duration-300 ${isHistorySidebarOpen ? 'bg-black/60 backdrop-blur-sm' : 'bg-transparent pointer-events-none'}`} onClick={() => setIsHistorySidebarOpen(false)}></div>
-        <aside className={`absolute top-0 left-0 h-full w-72 glass-panel border-r border-gray-200 dark:border-white/10 z-50 transform transition-transform duration-300 ease-in-out ${isHistorySidebarOpen ? 'translate-x-0' : '-translate-x-full'} shadow-2xl bg-white/90 dark:bg-[#151725]/90`}>
-            <div className="flex flex-col h-full">
-                <div className="flex justify-between items-center p-5 border-b border-gray-200 dark:border-white/10">
-                    <h2 className="font-bold text-gray-900 dark:text-white">Chat History</h2>
-                    <button onClick={() => setIsHistorySidebarOpen(false)} className="p-1.5 rounded-lg hover:bg-gray-200 dark:hover:bg-white/10 text-gray-500 dark:text-gray-400 hover:text-gray-900 dark:hover:text-white"><XCloseIcon className="w-5 h-5"/></button>
-                </div>
-                <div className="p-4">
-                    <button onClick={handleNewChat} className="flex items-center justify-center w-full bg-gradient-to-r from-indigo-600 to-violet-600 hover:from-indigo-500 hover:to-violet-500 text-white font-bold py-2.5 px-4 rounded-xl shadow-glow transition-all text-sm animate-gradient bg-200%">
-                        <PlusIcon className="w-5 h-5 mr-2"/>New Chat
-                    </button>
-                </div>
-                <nav className="flex-grow overflow-y-auto p-3 space-y-1 custom-scrollbar">
-                    {chatSessions.map(session => (
-                        <button key={session.id} onClick={() => handleSelectSession(session.id)} className={`w-full text-left p-3 rounded-xl text-sm group flex justify-between items-center transition-all ${activeSessionId === session.id ? 'bg-gray-200 dark:bg-white/10 text-gray-900 dark:text-white border border-gray-300 dark:border-white/5 font-semibold' : 'hover:bg-gray-100 dark:hover:bg-white/5 text-gray-600 dark:text-gray-400 hover:text-gray-900 dark:hover:text-white'}`}>
-                            <span className="truncate pr-2">{session.title}</span>
-                            <span onClick={(e) => handleDeleteSession(e, session.id)} className="opacity-0 group-hover:opacity-100 text-gray-500 hover:text-red-500 dark:hover:text-red-400 p-1 rounded transition-colors"><TrashIcon className="w-4 h-4" /></span>
-                        </button>
-                    ))}
-                </nav>
-            </div>
-        </aside>
-
-        {/* Main Chat Area - Transparent for ambient background */}
-        <div className="flex flex-col h-full z-10 relative">
-            <header className={`p-4 border-b border-gray-200/50 dark:border-white/5 bg-white/50 dark:bg-white/5 backdrop-blur-md flex justify-between items-center flex-shrink-0 transition-colors duration-500 ${isThinkingMode ? 'border-purple-200 dark:border-purple-500/20 bg-purple-50/50 dark:bg-purple-900/10' : ''}`}>
+    <div className="flex h-full animate-fade-in bg-[#F3F4F6] dark:bg-[#05050A] overflow-hidden font-sans">
+        
+        {/* Main Content Area */}
+        <div className="flex-1 flex flex-col h-full relative z-10 transition-all duration-300">
+            <header className="px-6 py-4 flex justify-between items-center flex-shrink-0">
                 <div className="flex items-center gap-4">
-                    <button onClick={() => setIsHistorySidebarOpen(true)} aria-label="Open chat history" className="flex items-center justify-center bg-white/50 dark:bg-white/5 hover:bg-white/80 dark:hover:bg-white/10 p-2.5 rounded-xl transition-colors border border-gray-200 dark:border-white/5 shadow-sm">
-                        <PlusIcon className="w-5 h-5 text-gray-600 dark:text-gray-300" />
+                    <button 
+                        onClick={() => setIsHistorySidebarOpen(!isHistorySidebarOpen)} 
+                        className="lg:hidden p-2 rounded-lg hover:bg-gray-200 dark:hover:bg-white/10 text-gray-500 dark:text-gray-400 transition-colors"
+                    >
+                        <DotsVerticalIcon className="w-5 h-5 transform rotate-90" />
                     </button>
-                </div>
-                <div>
-                    <button onClick={() => setIsInstructionsModalOpen(true)} className="p-2.5 rounded-xl text-gray-500 dark:text-gray-400 hover:text-gray-900 dark:hover:text-white hover:bg-gray-200 dark:hover:bg-white/10 transition-colors" aria-label="Custom Instructions">
-                        <SettingsIcon className="w-6 h-6" />
-                    </button>
+                    <h2 className="text-lg font-bold text-gray-900 dark:text-white">AI Chat</h2>
                 </div>
             </header>
             
-            <main className="flex-grow p-4 overflow-y-auto scroll-smooth custom-scrollbar">
-                <div className="max-w-3xl mx-auto">
+            <main className="flex-grow px-6 overflow-y-auto scroll-smooth custom-scrollbar flex flex-col">
+                <div className="max-w-3xl mx-auto w-full flex-grow flex flex-col pb-6">
                     {!activeSession || activeSession.messages.length === 0 ? (
-                        <div className="text-center py-20 flex flex-col items-center justify-center h-full opacity-0 animate-fade-in" style={{animationDelay: '0.2s', animationFillMode: 'forwards'}}>
-                            <div className="w-20 h-20 bg-indigo-500/10 text-indigo-500 dark:text-indigo-400 rounded-3xl flex items-center justify-center mb-6 shadow-glow border border-indigo-500/20 backdrop-blur-sm">
-                                <SparklesIcon className="w-10 h-10" />
+                        <div className="flex-grow flex flex-col items-center justify-center py-10 text-center animate-fade-in">
+                            <h1 className="text-4xl font-bold text-gray-900 dark:text-white mb-3 tracking-tight">Welcome to RepurposeAI</h1>
+                            <p className="text-base text-gray-500 dark:text-gray-400 mb-12 max-w-lg">
+                                Get started by selecting a task and Chat can do the rest. Not sure where to start?
+                            </p>
+                            
+                            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 w-full max-w-2xl">
+                                <button onClick={() => handleStarterClick("Help me write copy for a LinkedIn post about AI.")} className="group p-4 bg-white dark:bg-[#1E202E] border border-gray-200 dark:border-white/5 rounded-xl flex items-center justify-between hover:shadow-md transition-all text-left">
+                                    <div className="flex items-center gap-4">
+                                        <div className="w-10 h-10 rounded-lg bg-orange-100 dark:bg-orange-500/20 text-orange-600 dark:text-orange-400 flex items-center justify-center">
+                                            <FeatherIcon className="w-5 h-5" />
+                                        </div>
+                                        <span className="font-semibold text-gray-900 dark:text-white text-sm">Write copy</span>
+                                    </div>
+                                    <PlusIcon className="w-5 h-5 text-gray-300 group-hover:text-indigo-500 transition-colors"/>
+                                </button>
+                                
+                                <button onClick={() => handleStarterClick("Generate an image of a futuristic workspace.")} className="group p-4 bg-white dark:bg-[#1E202E] border border-gray-200 dark:border-white/5 rounded-xl flex items-center justify-between hover:shadow-md transition-all text-left">
+                                    <div className="flex items-center gap-4">
+                                        <div className="w-10 h-10 rounded-lg bg-blue-100 dark:bg-blue-500/20 text-blue-600 dark:text-blue-400 flex items-center justify-center">
+                                            <ImageIcon className="w-5 h-5" />
+                                        </div>
+                                        <span className="font-semibold text-gray-900 dark:text-white text-sm">Image generation</span>
+                                    </div>
+                                    <PlusIcon className="w-5 h-5 text-gray-300 group-hover:text-indigo-500 transition-colors"/>
+                                </button>
+                                
+                                <button onClick={() => handleStarterClick("Create a persona for a tech startup founder.")} className="group p-4 bg-white dark:bg-[#1E202E] border border-gray-200 dark:border-white/5 rounded-xl flex items-center justify-between hover:shadow-md transition-all text-left">
+                                    <div className="flex items-center gap-4">
+                                        <div className="w-10 h-10 rounded-lg bg-green-100 dark:bg-green-500/20 text-green-600 dark:text-green-400 flex items-center justify-center">
+                                            <UserIcon className="w-5 h-5" />
+                                        </div>
+                                        <span className="font-semibold text-gray-900 dark:text-white text-sm">Create persona</span>
+                                    </div>
+                                    <PlusIcon className="w-5 h-5 text-gray-300 group-hover:text-indigo-500 transition-colors"/>
+                                </button>
+                                
+                                <button onClick={() => handleStarterClick("Write code for a React component that...")} className="group p-4 bg-white dark:bg-[#1E202E] border border-gray-200 dark:border-white/5 rounded-xl flex items-center justify-between hover:shadow-md transition-all text-left">
+                                    <div className="flex items-center gap-4">
+                                        <div className="w-10 h-10 rounded-lg bg-pink-100 dark:bg-pink-500/20 text-pink-600 dark:text-pink-400 flex items-center justify-center">
+                                            <SparklesIcon className="w-5 h-5" />
+                                        </div>
+                                        <span className="font-semibold text-gray-900 dark:text-white text-sm">Write code</span>
+                                    </div>
+                                    <PlusIcon className="w-5 h-5 text-gray-300 group-hover:text-indigo-500 transition-colors"/>
+                                </button>
                             </div>
-                            <h3 className="text-2xl font-bold text-gray-900 dark:text-white mb-2">Content Copilot</h3>
-                            <p className="text-gray-600 dark:text-gray-400 max-w-md">I'm ready to brainstorm, draft, and refine your content strategy.</p>
                         </div>
                     ) : (
-                        activeSession.messages.map((msg, index) => (
-                        <div key={index} className={`flex ${msg.role === 'user' ? 'justify-end' : 'justify-start'} mb-6 group animate-fade-in`}>
-                            <div className={`max-w-[85%] p-5 rounded-2xl shadow-lg backdrop-blur-md ${
-                                msg.role === 'user' 
-                                ? 'bg-indigo-600 text-white rounded-br-none shadow-indigo-500/20' 
-                                : 'bg-white dark:bg-[#151725]/80 border border-gray-200 dark:border-white/10 text-gray-800 dark:text-gray-200 rounded-bl-none shadow-black/5 dark:shadow-black/20'
-                            }`}>
-                                {msg.role === 'model'
-                                    ? (msg.parts[0].text ? <MarkdownRenderer content={msg.parts[0].text} /> : <span className="flex gap-1.5 py-1"><span className="w-2 h-2 bg-indigo-400 rounded-full animate-bounce"></span><span className="w-2 h-2 bg-indigo-400 rounded-full animate-bounce delay-100"></span><span className="w-2 h-2 bg-indigo-400 rounded-full animate-bounce delay-200"></span></span>)
-                                    : (
+                        <div className="flex-grow flex flex-col justify-end space-y-6 py-4">
+                            {activeSession.messages.map((msg, index) => (
+                            <div key={index} className={`flex ${msg.role === 'user' ? 'justify-end' : 'justify-start'} group animate-fade-in`}>
+                                <div className={`max-w-full md:max-w-[85%] ${msg.role === 'user' ? 'bg-[#F3F4F6] dark:bg-[#1A1C29] p-4 rounded-2xl text-gray-900 dark:text-white' : 'w-full'}`}>
+                                    {msg.role === 'model' ? (
+                                        <div className="flex gap-4 items-start">
+                                            <div className="w-8 h-8 rounded-full bg-gradient-to-tr from-blue-600 to-indigo-600 flex items-center justify-center text-white font-bold text-xs flex-shrink-0 shadow-lg">
+                                                AI
+                                            </div>
+                                            <div className="flex-1 min-w-0 space-y-2">
+                                                {msg.parts[0].text ? (
+                                                    <div className="text-gray-900 dark:text-gray-100 leading-relaxed text-sm">
+                                                        <MarkdownRenderer content={msg.parts[0].text} />
+                                                    </div>
+                                                ) : (
+                                                    <div className="flex gap-1 py-2">
+                                                        <span className="w-2 h-2 bg-gray-400 rounded-full animate-bounce"></span>
+                                                        <span className="w-2 h-2 bg-gray-400 rounded-full animate-bounce delay-100"></span>
+                                                        <span className="w-2 h-2 bg-gray-400 rounded-full animate-bounce delay-200"></span>
+                                                    </div>
+                                                )}
+                                                
+                                                {/* Action Bar */}
+                                                {!isLoading && msg.parts[0].text && (
+                                                    <div className="flex items-center gap-2 mt-2 pt-2">
+                                                        <button onClick={() => handleCopy(msg.parts[0].text)} className="p-1.5 text-gray-400 hover:text-gray-600 dark:hover:text-gray-300 transition-colors rounded-md hover:bg-gray-100 dark:hover:bg-white/5" title="Copy">
+                                                            <CopyIcon className="w-4 h-4"/>
+                                                        </button>
+                                                        <button className="p-1.5 text-gray-400 hover:text-gray-600 dark:hover:text-gray-300 transition-colors rounded-md hover:bg-gray-100 dark:hover:bg-white/5" title="Good response">
+                                                            <ThumbsUpIcon className="w-4 h-4"/>
+                                                        </button>
+                                                        <button className="p-1.5 text-gray-400 hover:text-gray-600 dark:hover:text-gray-300 transition-colors rounded-md hover:bg-gray-100 dark:hover:bg-white/5" title="Bad response">
+                                                            <ThumbsDownIcon className="w-4 h-4"/>
+                                                        </button>
+                                                        <button onClick={() => handleRegenerate(index)} className="p-1.5 text-gray-400 hover:text-gray-600 dark:hover:text-gray-300 transition-colors rounded-md hover:bg-gray-100 dark:hover:bg-white/5" title="Regenerate">
+                                                            <RefreshIcon className="w-4 h-4"/>
+                                                        </button>
+                                                        <button className="p-1.5 text-gray-400 hover:text-gray-600 dark:hover:text-gray-300 transition-colors rounded-md hover:bg-gray-100 dark:hover:bg-white/5" title="Share">
+                                                            <ShareIcon className="w-4 h-4"/>
+                                                        </button>
+                                                        
+                                                        {msg.versions && msg.versions.length > 1 && (
+                                                            <div className="flex items-center gap-1 ml-2 text-xs text-gray-400 font-medium select-none">
+                                                                <button 
+                                                                    onClick={() => handleVersionChange(index, 'prev')}
+                                                                    disabled={(msg.currentVersionIndex || 0) === 0}
+                                                                    className="p-1 hover:text-gray-600 dark:hover:text-gray-200 disabled:opacity-30"
+                                                                >
+                                                                    <ChevronLeftIcon className="w-3 h-3"/>
+                                                                </button>
+                                                                <span>{(msg.currentVersionIndex || 0) + 1} / {msg.versions.length}</span>
+                                                                <button 
+                                                                    onClick={() => handleVersionChange(index, 'next')}
+                                                                    disabled={(msg.currentVersionIndex || 0) === msg.versions.length - 1}
+                                                                    className="p-1 hover:text-gray-600 dark:hover:text-gray-200 disabled:opacity-30"
+                                                                >
+                                                                    <ChevronRightIcon className="w-3 h-3"/>
+                                                                </button>
+                                                            </div>
+                                                        )}
+                                                    </div>
+                                                )}
+                                            </div>
+                                        </div>
+                                    ) : (
                                         <div>
                                             {msg.parts.map((part, i) => (
-                                                <React.Fragment key={i}>
-                                                    {part.text && <div className="whitespace-pre-wrap leading-relaxed">{part.text}</div>}
+                                                <div key={i} className="whitespace-pre-wrap text-sm">
+                                                    {part.text}
                                                     {part.inlineData && (
-                                                        <div className="mt-2 p-2 bg-white/20 rounded-lg text-xs flex items-center border border-white/10">
+                                                        <div className="mt-2 p-2 bg-white/50 dark:bg-white/10 rounded-lg text-xs flex items-center border border-gray-200 dark:border-white/10">
                                                             <span className="opacity-90 font-mono">📎 Attached Media</span>
                                                         </div>
                                                     )}
-                                                </React.Fragment>
+                                                </div>
                                             ))}
                                         </div>
-                                    )
-                                }
+                                    )}
+                                </div>
                             </div>
-                        </div>
-                        ))
-                    )}
-                    {isLoading && (
-                        <div className="flex justify-start mb-6 animate-fade-in">
-                            <div className="bg-white dark:bg-[#151725]/80 border border-gray-200 dark:border-white/10 p-4 rounded-2xl rounded-bl-none shadow-lg flex gap-1.5 items-center backdrop-blur-md">
-                                <span className="w-1.5 h-1.5 bg-indigo-400 rounded-full animate-bounce"></span>
-                                <span className="w-1.5 h-1.5 bg-indigo-400 rounded-full animate-bounce delay-75"></span>
-                                <span className="w-1.5 h-1.5 bg-indigo-400 rounded-full animate-bounce delay-150"></span>
-                            </div>
-                        </div>
-                    )}
-                    <div ref={messagesEndRef} />
-                </div>
-            </main>
-
-            <footer className="p-6 flex-shrink-0">
-                <div className="max-w-3xl mx-auto">
-                    {/* Animated Border Container */}
-                    <div className="relative group rounded-3xl p-[2px] overflow-hidden transition-all duration-300">
-                        {/* Spinning Gradient Border */}
-                        <div 
-                            className={`absolute inset-[-100%] animate-spin ${!isThinkingMode && !useSearch ? 'opacity-0' : 'opacity-100'}`}
-                            style={{
-                                background: `conic-gradient(from 90deg at 50% 50%, ${gradientColors})`,
-                                transition: 'opacity 0.3s ease-in-out'
-                            }}
-                        />
-                        
-                        {/* Inner Content - Background ensures opacity doesn't show gradient through text */}
-                        <div className={`relative rounded-3xl bg-white dark:bg-[#151725] h-full ${!isThinkingMode && !useSearch ? 'border border-gray-200 dark:border-white/10' : ''}`}>
-                            {attachment && (
-                                <div className="px-4 pt-3 flex items-center animate-fade-in">
-                                    <div className="relative bg-gray-100 dark:bg-white/10 rounded-lg p-2 pr-8 text-xs flex items-center gap-2 border border-gray-200 dark:border-white/10">
-                                        <div className="bg-indigo-500/20 p-1 rounded text-indigo-600 dark:text-indigo-300">
-                                            {attachment.mimeType.startsWith('image') ? 'IMG' : 'FILE'}
-                                        </div>
-                                        <span className="truncate max-w-[150px] font-medium text-gray-700 dark:text-gray-200">{attachment.name}</span>
-                                        <button onClick={() => setAttachment(null)} className="absolute right-1 top-1 text-gray-400 hover:text-gray-600 dark:hover:text-white p-0.5">
-                                            <XCloseIcon className="w-3 h-3"/>
-                                        </button>
+                            ))}
+                            {isLoading && activeSession.messages[activeSession.messages.length - 1]?.role === 'user' && (
+                                <div className="flex gap-4 items-start animate-fade-in">
+                                    <div className="w-8 h-8 rounded-full bg-gradient-to-tr from-blue-600 to-indigo-600 flex items-center justify-center text-white font-bold text-xs flex-shrink-0 shadow-lg">
+                                        AI
+                                    </div>
+                                    <div className="flex items-center gap-1.5 py-3">
+                                        <span className="w-2 h-2 bg-gray-400 rounded-full animate-bounce"></span>
+                                        <span className="w-2 h-2 bg-gray-400 rounded-full animate-bounce delay-75"></span>
+                                        <span className="w-2 h-2 bg-gray-400 rounded-full animate-bounce delay-150"></span>
                                     </div>
                                 </div>
                             )}
+                            <div ref={messagesEndRef} />
+                        </div>
+                    )}
+                </div>
+            </main>
 
+            <footer className="p-4 md:p-6 flex-shrink-0">
+                <div className="max-w-3xl mx-auto w-full">
+                    {/* New Input Design */}
+                    <div className={`relative bg-white dark:bg-[#1E202E] rounded-2xl shadow-lg border border-gray-200 dark:border-white/5 transition-all duration-300 p-2 ${isThinkingMode ? 'ring-2 ring-indigo-500/20' : ''}`}>
+                        
+                        {isThinkingMode && (
+                            <div className="absolute -top-3 left-4 px-2 py-0.5 bg-indigo-100 dark:bg-indigo-900/50 text-indigo-700 dark:text-indigo-300 text-[10px] font-bold uppercase tracking-wider rounded-full border border-indigo-200 dark:border-indigo-800 animate-fade-in">
+                                Reasoning Mode
+                            </div>
+                        )}
+
+                        {attachment && (
+                            <div className="px-4 pt-3 flex items-center animate-fade-in">
+                                <div className="relative bg-gray-50 dark:bg-black/20 rounded-lg p-2 pr-8 text-xs flex items-center gap-2 border border-gray-100 dark:border-white/5">
+                                    <div className="bg-indigo-50 dark:bg-indigo-900/30 p-1 rounded text-indigo-600 dark:text-indigo-400">
+                                        {attachment.mimeType.startsWith('image') ? 'IMG' : 'FILE'}
+                                    </div>
+                                    <span className="truncate max-w-[150px] font-medium text-gray-700 dark:text-gray-200">{attachment.name}</span>
+                                    <button onClick={() => setAttachment(null)} className="absolute right-1 top-1 text-gray-400 hover:text-gray-600 dark:hover:text-white p-0.5">
+                                        <XCloseIcon className="w-3 h-3"/>
+                                    </button>
+                                </div>
+                            </div>
+                        )}
+
+                        <div className="flex flex-col">
                             <textarea
                                 value={input}
                                 onChange={e => setInput(e.target.value)}
@@ -473,90 +650,141 @@ export const ChatPage: React.FC<ChatPageProps> = ({ currentUser }) => {
                                         handleSubmit(e as any);
                                     }
                                 }}
-                                placeholder={isThinkingMode ? "Reasoning mode active..." : "Type your request..."}
+                                placeholder={isRecording ? "Listening..." : "Summarize the latest..."}
                                 disabled={isLoading}
                                 rows={1}
-                                className="w-full px-5 py-4 bg-transparent border-none rounded-3xl focus:ring-0 resize-none max-h-32 text-gray-900 dark:text-white placeholder:text-gray-400 font-medium"
+                                className="w-full px-4 pt-3 pb-2 bg-transparent border-none focus:ring-0 resize-none text-gray-900 dark:text-white placeholder:text-gray-400 text-base min-h-[60px]"
                             />
-                            <div className="flex justify-between items-center px-3 pb-3">
-                                <div className="flex items-center space-x-1 pl-1">
-                                    {/* File Upload */}
+                            
+                            <div className="flex justify-between items-center px-3 pb-2 mt-2">
+                                <div className="flex items-center gap-2">
                                     <input 
                                         type="file" 
                                         ref={fileInputRef} 
                                         className="hidden" 
                                         onChange={handleFileUpload} 
-                                        accept="image/png,image/jpeg,image/webp,audio/wav,audio/mp3,audio/aiff,audio/aac,audio/ogg,audio/flac"
+                                        accept="image/*,audio/*,.pdf,.txt"
                                     />
+                                    
                                     <button 
                                         type="button" 
                                         onClick={() => fileInputRef.current?.click()}
-                                        className="p-2 rounded-full text-gray-400 hover:text-gray-700 dark:hover:text-white hover:bg-gray-100 dark:hover:bg-white/10 transition-colors"
-                                        title="Upload file"
+                                        className="flex items-center gap-1.5 px-3 py-1.5 rounded-full text-xs font-semibold text-gray-600 dark:text-gray-400 hover:bg-gray-100 dark:hover:bg-white/5 transition-colors"
                                     >
-                                        <PlusIcon className="w-5 h-5" />
+                                        <UploadIcon className="w-4 h-4" />
+                                        <span className="hidden sm:inline">Attach</span>
                                     </button>
 
-                                    {/* AI Tools Menu */}
-                                    <div className="relative">
-                                        <button 
-                                            type="button" 
-                                            onClick={() => setIsToolsOpen(!isToolsOpen)}
-                                            className={`p-2 rounded-full transition-all duration-200 ${isThinkingMode || useSearch || isToolsOpen ? 'text-indigo-600 dark:text-indigo-400 bg-indigo-50 dark:bg-indigo-500/10' : 'text-gray-400 hover:text-gray-700 dark:hover:text-white hover:bg-gray-100 dark:hover:bg-white/10'}`}
-                                            title="AI Tools & Settings"
-                                        >
-                                            <SparklesIcon className="w-5 h-5" />
-                                        </button>
-                                        
-                                        {isToolsOpen && (
-                                            <>
-                                                <div className="fixed inset-0 z-10" onClick={() => setIsToolsOpen(false)}></div>
-                                                <div className="absolute bottom-full left-0 mb-3 w-60 bg-white dark:bg-[#151725] rounded-xl shadow-2xl p-2 z-20 animate-scale-in border border-gray-200 dark:border-white/10">
-                                                    <div className="px-3 py-2 text-[10px] font-bold text-gray-500 uppercase tracking-wider border-b border-gray-100 dark:border-white/5 mb-1"> capabilities</div>
-                                                    
-                                                    <button 
-                                                        onClick={() => { setIsThinkingMode(!isThinkingMode); if(useSearch) setUseSearch(false); }}
-                                                        className={`w-full flex items-center justify-between px-3 py-2.5 rounded-lg text-sm transition-colors mb-1 ${isThinkingMode ? 'bg-indigo-50 dark:bg-indigo-500/20 text-indigo-700 dark:text-indigo-300' : 'hover:bg-gray-50 dark:hover:bg-white/5 text-gray-700 dark:text-gray-300'}`}
-                                                    >
-                                                        <div className="flex items-center gap-2">
-                                                            <span className={`w-2 h-2 rounded-full ${isThinkingMode ? 'bg-indigo-500 dark:bg-indigo-400 shadow-[0_0_8px_rgba(99,102,241,0.8)]' : 'bg-gray-400 dark:bg-gray-600'}`}></span>
-                                                            Thinking Mode
-                                                        </div>
-                                                        {isThinkingMode && <CheckIcon className="w-4 h-4"/>}
-                                                    </button>
+                                    <button 
+                                        type="button" 
+                                        onClick={handleMicClick}
+                                        className={`flex items-center gap-1.5 px-3 py-1.5 rounded-full text-xs font-semibold transition-colors ${
+                                            isRecording 
+                                            ? 'text-red-500 bg-red-50 border-red-100 dark:bg-red-900/20 dark:border-red-900/50 border' 
+                                            : 'text-gray-600 dark:text-gray-400 hover:bg-gray-100 dark:hover:bg-white/5'
+                                        }`}
+                                    >
+                                        <MicrophoneIcon className="w-4 h-4" />
+                                        <span className="hidden sm:inline">{isRecording ? 'Stop' : 'Voice Message'}</span>
+                                    </button>
 
-                                                    <button 
-                                                        onClick={() => { setUseSearch(!useSearch); if(isThinkingMode) setIsThinkingMode(false); }}
-                                                        className={`w-full flex items-center justify-between px-3 py-2.5 rounded-lg text-sm transition-colors ${useSearch ? 'bg-yellow-50 dark:bg-yellow-500/20 text-yellow-700 dark:text-yellow-300' : 'hover:bg-gray-50 dark:hover:bg-white/5 text-gray-700 dark:text-gray-300'}`}
-                                                    >
-                                                        <div className="flex items-center gap-2">
-                                                            <span className={`w-2 h-2 rounded-full ${useSearch ? 'bg-yellow-500 dark:bg-yellow-400 shadow-[0_0_8px_rgba(234,179,8,0.8)]' : 'bg-gray-400 dark:bg-gray-600'}`}></span>
-                                                            Google Search
-                                                        </div>
-                                                        {useSearch && <CheckIcon className="w-4 h-4"/>}
-                                                    </button>
-                                                </div>
-                                            </>
-                                        )}
-                                    </div>
+                                    <button 
+                                        type="button" 
+                                        onClick={() => setIsThinkingMode(!isThinkingMode)}
+                                        className={`flex items-center gap-1.5 px-3 py-1.5 rounded-full text-xs font-semibold transition-colors ${
+                                            isThinkingMode 
+                                            ? 'text-indigo-600 bg-indigo-50 border border-indigo-200 dark:text-indigo-300 dark:bg-indigo-900/30 dark:border-indigo-800' 
+                                            : 'text-gray-600 dark:text-gray-400 hover:bg-gray-100 dark:hover:bg-white/5'
+                                        }`}
+                                    >
+                                        <SparklesIcon className="w-4 h-4" />
+                                        <span className="hidden sm:inline">Browse Prompts</span>
+                                    </button>
                                 </div>
 
-                                <div className="flex items-center gap-2">
-                                    <button type="button" onClick={handleMicClick} className={`p-2.5 rounded-full transition-all ${isRecording ? 'bg-red-500/20 text-red-500 animate-pulse border border-red-500/50 shadow-[0_0_15px_rgba(239,68,68,0.4)]' : 'hover:bg-gray-100 dark:hover:bg-white/10 text-gray-400 hover:text-gray-700 dark:hover:text-white'}`}>
-                                        <MicrophoneIcon className="w-5 h-5" />
-                                    </button>
-                                    <button type="submit" disabled={isLoading || (!input.trim() && !attachment)} className="bg-indigo-600 hover:bg-indigo-500 text-white p-2.5 rounded-xl disabled:bg-gray-300 dark:disabled:bg-gray-700 disabled:text-gray-500 dark:disabled:text-gray-500 disabled:cursor-not-allowed transition-all shadow-glow hover:scale-105 active:scale-95">
-                                        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="currentColor" className="w-5 h-5">
-                                            <path d="M3.478 2.405a.75.75 0 00-.926.94l2.432 7.905H13.5a.75.75 0 010 1.5H4.984l-2.432 7.905a.75.75 0 00.926.94 60.519 60.519 0 0018.445-8.986.75.75 0 000-1.218A60.517 60.517 0 003.478 2.405z" />
-                                        </svg>
+                                <div className="flex items-center gap-4">
+                                    <span className="text-[10px] font-mono text-gray-400 hidden sm:block">
+                                        {input.length}/3,000
+                                    </span>
+                                    <button 
+                                        type="button" 
+                                        onClick={(e) => handleSubmit(e as any)} 
+                                        disabled={isLoading || (!input.trim() && !attachment)} 
+                                        className="p-2 bg-transparent hover:bg-gray-100 dark:hover:bg-white/10 text-gray-400 hover:text-gray-900 dark:hover:text-white rounded-lg disabled:opacity-30 disabled:cursor-not-allowed transition-all"
+                                    >
+                                        <ChevronRightIcon className="w-5 h-5" />
                                     </button>
                                 </div>
                             </div>
                         </div>
                     </div>
+                    
+                    <p className="text-[10px] text-center text-gray-400 mt-3">
+                        Script may generate inaccurate information about people, places, or facts. Model: Script AI v1.3
+                    </p>
                 </div>
             </footer>
         </div>
+
+        {/* Right Sidebar (History) */}
+        <aside 
+            className={`fixed inset-y-0 right-0 w-80 bg-white dark:bg-[#0B0C15] border-l border-gray-200 dark:border-white/5 z-40 transform transition-transform duration-300 ease-in-out ${isHistorySidebarOpen ? 'translate-x-0' : 'translate-x-full'} flex flex-col shadow-2xl lg:shadow-none lg:relative lg:translate-x-0 lg:w-72 ${!isHistorySidebarOpen && 'lg:hidden'}`}
+        >
+            <div className="flex justify-between items-center p-6 pb-2">
+                <div className="flex items-center justify-between w-full">
+                    <h3 className="font-bold text-gray-900 dark:text-white text-sm">Projects ({chatSessions.length})</h3>
+                    <button onClick={() => { setIsInstructionsModalOpen(true) }} className="text-gray-400 hover:text-gray-600 dark:hover:text-gray-300 transition-colors">
+                        <DotsVerticalIcon className="w-4 h-4"/>
+                    </button>
+                </div>
+            </div>
+
+            <div className="p-4 pt-0">
+                <div 
+                    onClick={handleNewChat}
+                    className="flex items-center gap-3 p-3 rounded-xl cursor-pointer hover:bg-gray-50 dark:hover:bg-white/5 transition-all text-gray-700 dark:text-gray-300 mb-2"
+                >
+                    <div className="w-8 h-8 rounded-full bg-gray-100 dark:bg-white/10 flex items-center justify-center">
+                        <PlusIcon className="w-4 h-4"/>
+                    </div>
+                    <span className="font-semibold text-sm">New Project</span>
+                </div>
+                
+                <div className="w-full h-px bg-gray-100 dark:bg-white/5 my-2"></div>
+            </div>
+
+            <div className="flex-1 overflow-y-auto custom-scrollbar px-4 space-y-1">
+                {chatSessions.map(session => (
+                    <div 
+                        key={session.id} 
+                        onClick={() => handleSelectSession(session.id)}
+                        className={`group relative flex flex-col p-3 rounded-xl cursor-pointer transition-all ${
+                            activeSessionId === session.id 
+                            ? 'bg-gray-50 dark:bg-[#1E202E]' 
+                            : 'hover:bg-gray-50 dark:hover:bg-white/5'
+                        }`}
+                    >
+                        <h4 className={`text-sm font-medium truncate pr-6 ${activeSessionId === session.id ? 'text-gray-900 dark:text-white' : 'text-gray-600 dark:text-gray-400'}`}>
+                            {session.title || "New Project"}
+                        </h4>
+                        <p className="text-xs text-gray-400 dark:text-gray-500 mt-0.5 line-clamp-1">
+                            {session.messages.length > 0 
+                                ? (session.messages[session.messages.length - 1].parts[0].text || "Attachment") 
+                                : "Start a new conversation..."}
+                        </p>
+                        
+                        {/* Context Menu Trigger (Hidden by default, shown on hover/active) */}
+                        <button 
+                            onClick={(e) => handleDeleteSession(e, session.id)} 
+                            className={`absolute right-2 top-3 text-gray-400 hover:text-red-500 p-1 rounded hover:bg-gray-200 dark:hover:bg-white/10 transition-all ${activeSessionId === session.id ? 'opacity-100' : 'opacity-0 group-hover:opacity-100'}`}
+                        >
+                            <TrashIcon className="w-3 h-3" />
+                        </button>
+                    </div>
+                ))}
+            </div>
+        </aside>
+
         <CustomInstructionsModal
             isOpen={isInstructionsModalOpen}
             onClose={() => setIsInstructionsModalOpen(false)}
